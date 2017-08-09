@@ -4,6 +4,10 @@ A bare minimal service discovery system.
 Divulges IP addresses of hosts on the same subnet with the same "magic" string
 in Announce mode.
 
+By design, sd01 does not support device metadata. It is intended that the
+device will be interrogated by the discoverer post-discovery via another
+mechanism.
+
 Usage:
     # on devices that you wish to discover
     Announcer('my_project_magic_string').start()
