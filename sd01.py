@@ -18,6 +18,9 @@ Usage:
 
 `get_hosts` will only return hosts that are actively Announcing.
 
+sd01 works using a UDP broadcast of a magic string on an automatically chosen
+port over 10000. A port can be specified when you have an os-level firewall enabled.
+
 """
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread,Lock
@@ -35,7 +38,7 @@ except ImportError:
     from time import time
 
 class Base(Thread):
-    def __init__(self,magic,interval=5):
+    def __init__(self,magic,interval=5,port=None):
         super(Base,self).__init__()
         self.magic = str(magic).encode('ascii')
         self.interval = int(interval)
@@ -43,9 +46,10 @@ class Base(Thread):
         if self.interval < 1:
             raise ValueError('Interval must be more than 1')
 
-        # may remove this behavior due to firewall implications
-        # picka deterministic high port number
-        self.port = 10**4 + crc32(self.magic) % 10**4
+        # User may have selected a port due to firewall implications.
+        # otherwise, pick a deterministic high port number
+        if not port:
+            self.port = 10**4 + crc32(self.magic) % 10**4
 
 
 class Announcer(Base):
