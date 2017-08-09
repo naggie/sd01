@@ -62,6 +62,8 @@ log = getLogger(__name__)
 
 
 class Base(Thread):
+    daemon = True
+
     def __init__(self, magic, interval=5, port=None):
         super(Base, self).__init__()
         self.magic = str(magic).encode('ascii')
@@ -78,8 +80,6 @@ class Base(Thread):
 
 
 class Announcer(Base):
-    daemon = True
-
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
@@ -94,8 +94,6 @@ class Announcer(Base):
 
 
 class Discoverer(Base):
-    daemon = True
-
     def __init__(self, *args, **kwargs):
         super(Discoverer, self).__init__(*args, **kwargs)
 
