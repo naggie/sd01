@@ -53,7 +53,8 @@ class Base(Thread):
         # User may have selected a port due to firewall implications.
         # otherwise, pick a deterministic high port number
         if not port:
-            self.port = 10**4 + crc32(self.magic) % 10**4
+            # & 0xffffffff to match python3 behavior
+            self.port = 10**4 + crc32(self.magic) & 0xFFFFFFFF % 10**4
 
 
 class Announcer(Base):
@@ -80,10 +81,14 @@ class Discoverer(Base):
 
         self.lock = Lock()
 
+        self.running = False
+
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
         s.bind(('', self.port))
+
+        self.running = True
 
         while True:
             data, addr = s.recvfrom(len(self.magic))
@@ -93,6 +98,9 @@ class Discoverer(Base):
                 self.hosts[host] = time()
 
     def get_hosts(self,wait=False):
+        if not self.running:
+            raise RuntimeError('You must call start() first to start listening for announcements')
+
         if wait:
             sleep(self.interval+1)
 
