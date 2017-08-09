@@ -1,5 +1,5 @@
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
-from threading import Thread
+from threading import Thread,Lock
 from binascii import crc32
 from logging import getLogger
 from time import sleep
@@ -49,6 +49,8 @@ class Discoverer(Base):
         # map of host -> timestamp of last announcement
         self.hosts = dict()
 
+        self.lock = Lock()
+
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
@@ -66,4 +68,6 @@ class Discoverer(Base):
             sleep(self.interval+1)
 
         min_ts = time() - self.interval * 2
-        return [h for h,ts in self.hosts.items() if ts > min_ts]
+
+        with self.lock:
+            return [h for h,ts in self.hosts.items() if ts > min_ts]
