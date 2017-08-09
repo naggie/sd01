@@ -1,3 +1,24 @@
+"""
+A bare minimal service discovery system.
+
+Divulges IP addresses of hosts on the same subnet with the same "magic" string
+in Announce mode.
+
+Usage:
+    # on devices that you wish to discover
+    Announcer('my_project_magic_string').start()
+
+    # on machine that must discover hosts
+    d = Discoverer('my_project_magic_string')
+    d.start()
+    hosts = d.get_hosts(wait=True)
+
+    # ...at any time, preferably after wait
+    hosts = d.get_hosts()
+
+`get_hosts` will only return hosts that are actively Announcing.
+
+"""
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread,Lock
 from binascii import crc32
