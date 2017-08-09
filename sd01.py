@@ -20,12 +20,12 @@
 """
 A bare minimal service discovery system.
 
-Divulges IP addresses of hosts on the same subnet with the same "magic" string
+Divulges IPv4 addresses of hosts on the same subnet with the same "magic" string
 in Announce mode.
 
-By design, sd01 does not support device metadata. It is intended that the
+By design, sd01 does not support service descriptions. It is intended that the
 device will be interrogated by the discoverer post-discovery via another
-mechanism.
+mechanism, and operate on a canonical port.
 
 Usage:
     # on devices that you wish to discover
@@ -45,6 +45,9 @@ sd01 works using a UDP broadcast of a magic string on an automatically chosen
 port over 10000. A port can be specified when you have an os-level firewall enabled.
 
 """
+# TODO IPv6 (multicast based) support
+# example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
+
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
 from binascii import crc32
@@ -101,7 +104,6 @@ class Discoverer(Base):
         self.hosts = dict()
 
         self.lock = Lock()
-
         self.running = False
 
     def run(self):
