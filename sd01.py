@@ -137,7 +137,8 @@ class Discoverer(Base):
             if data == self.magic:
                 host = addr[0]
                 log.debug('Discovered %s with magic %s', host, self.magic)
-                self.hosts[host] = time()
+                with self.lock:
+                    self.hosts[host] = time()
 
 
     def get_hosts(self, wait=False):
