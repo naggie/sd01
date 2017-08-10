@@ -53,6 +53,7 @@ from threading import Thread, Lock
 from binascii import crc32
 from logging import getLogger
 from time import sleep
+from functools import wraps
 
 try:
     # Python 3.x
@@ -62,6 +63,22 @@ except ImportError:
     from time import time
 
 log = getLogger(__name__)
+
+
+
+def forever_IOError(fn):
+    @wraps(fn)
+    def _fn(*args,**kwargs):
+        while True:
+            try:
+                return fn(*args,**kwargs)
+            except IOError as e:
+                # particularly e.errno == ENETUNREACH
+                log.exception('Caught IOError, re-attempting.')
+                sleep(5)
+
+    return _fn
+
 
 
 class Base(Thread):
@@ -83,6 +100,7 @@ class Base(Thread):
 
 
 class Announcer(Base):
+    @forever_IOError
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
@@ -106,6 +124,7 @@ class Discoverer(Base):
         self.lock = Lock()
         self.running = False
 
+    @forever_IOError
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
@@ -119,6 +138,7 @@ class Discoverer(Base):
                 host = addr[0]
                 log.debug('Discovered %s with magic %s', host, self.magic)
                 self.hosts[host] = time()
+
 
     def get_hosts(self, wait=False):
         if not self.running:
