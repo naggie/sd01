@@ -25,7 +25,8 @@ in Announce mode.
 
 By design, sd01 does not support service descriptions. It is intended that the
 device will be interrogated by the discoverer post-discovery via another
-mechanism, and operate on a canonical port.
+mechanism, and operate on a canonical port.*
+
 
 Usage:
     # on devices that you wish to discover
@@ -43,6 +44,17 @@ Usage:
 
 sd01 works using a UDP broadcast of a magic string on an automatically chosen
 port over 10000. A port can be specified when you have an os-level firewall enabled.
+
+
+
+* If multiple services are required to run on one host, and therefore use
+different ports the following mechanism is suggested:
+
+    1. Services start (in any order) and attempt bind to a base port
+    2. If the bind fails, increment port number by one and try again up to a limit of 10 (or so)
+    3. The discoverer should try to bind to the base port and all ports following up to the limit of 10
+
+This way, services don't have to be configured with individual ports explicitly.
 
 """
 # TODO IPv6 (multicast based) support
