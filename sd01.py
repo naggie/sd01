@@ -50,7 +50,8 @@ Usage:
 
 `get_services` will only return services that are actively Announcing.
 
-sd01 works using a UDP broadcast of a magic string on port 17823.
+sd01 works using a UDP broadcast of a magic string on port 17823 every 5
+seconds.
 
 """
 # TODO IPv6 (multicast based) support
@@ -82,12 +83,13 @@ INTERVAL = 5
 
 PORT = 17823
 
+
 def forever_IOError(fn):
     @wraps(fn)
-    def _fn(*args,**kwargs):
+    def _fn(*args, **kwargs):
         while True:
             try:
-                return fn(*args,**kwargs)
+                return fn(*args, **kwargs)
             except IOError as e:
                 # particularly e.errno == ENETUNREACH
                 log.exception('Caught IOError, re-attempting.')
@@ -115,9 +117,9 @@ class Announcer(Thread):
         s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
         magic = PACKET_FORMAT.format(
-                service_class=self.service_class,
-                port=self.service_port,
-                ).encode('ascii')
+            service_class=self.service_class,
+            port=self.service_port,
+        ).encode('ascii')
 
         while True:
             log.debug('Announcing on port %s with magic %s',
@@ -139,7 +141,6 @@ class Discoverer(Thread):
         self.lock = Lock()
         self.running = False
 
-
     @forever_IOError
     def run(self):
         # create UDP socket
@@ -149,12 +150,12 @@ class Discoverer(Thread):
         self.running = True
 
         magic = PACKET_FORMAT.format(
-                service_class=self.service_class,
-                port=0,
-                ).encode('ascii')
+            service_class=self.service_class,
+            port=0,
+        ).encode('ascii')
 
         while True:
-            data, addr = s.recvfrom(len(magic)+5)
+            data, addr = s.recvfrom(len(magic) + 5)
             if data.startswith(magic[:-5]):
                 host = addr[0]
 
@@ -171,14 +172,14 @@ class Discoverer(Thread):
                     continue
 
                 if 0 > port > 65535:
-                    log.warn('Received invalid sd01 packet: port number out of legal range')
+                    log.warn(
+                        'Received invalid sd01 packet: port number out of legal range')
                     continue
 
                 log.debug('Discovered %s on port %s', host, port)
 
                 with self.lock:
-                    self.services[(host,port)] = time()
-
+                    self.services[(host, port)] = time()
 
     def get_services(self, wait=False):
         '''Returns a list of tuples (host,port) for active services'''
