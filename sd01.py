@@ -43,8 +43,8 @@ Usage:
 `get_hosts` will only return hosts that are actively Announcing.
 
 sd01 works using a UDP broadcast of a magic string on an automatically chosen
-port over 10000. A port can be specified when you have an os-level firewall enabled.
-
+port 17823. A port can be specified, but bear in mind the services and
+discoverer must know it.
 
 
 * If multiple services are required to run on one host, and therefore use
@@ -54,7 +54,9 @@ different ports the following mechanism is suggested:
     2. If the bind fails, increment port number by one and try again up to a limit of 10 (or so)
     3. The discoverer should try to bind to the base port and all ports following up to the limit of 10
 
-This way, services don't have to be configured with individual ports explicitly.
+This way, services don't have to be configured with individual ports
+explicitly. Note that ONE instance of sd01 should be running! The only the
+services should run on different ports!
 
 """
 # TODO IPv6 (multicast based) support
@@ -62,7 +64,6 @@ This way, services don't have to be configured with individual ports explicitly.
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
-from binascii import crc32
 from logging import getLogger
 from time import sleep
 from functools import wraps
@@ -96,19 +97,13 @@ def forever_IOError(fn):
 class Base(Thread):
     daemon = True
 
-    def __init__(self, magic, interval=5, port=None):
+    def __init__(self, magic, interval=5, port=17823):
         super(Base, self).__init__()
         self.magic = str(magic).encode('ascii')
         self.interval = int(interval)
 
         if self.interval < 1:
             raise ValueError('Interval must be more than 1')
-
-        # User may have selected a port due to firewall implications.
-        # otherwise, pick a deterministic high port number
-        if not port:
-            # & 0xffffffff to match python3 behavior
-            self.port = 10**4 + crc32(self.magic) & 0xFFFFFFFF % 10**4
 
 
 class Announcer(Base):
