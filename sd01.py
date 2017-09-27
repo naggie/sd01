@@ -20,43 +20,37 @@
 """
 A bare minimal service discovery system.
 
-Divulges IPv4 addresses of hosts on the same subnet with the same "magic" string
-in Announce mode.
+Divulges IPv4 addresses and ports of services running on the same subnet with
+the same "service id" ascii string in Announce mode.
 
 By design, sd01 does not support service descriptions. It is intended that the
 device will be interrogated by the discoverer post-discovery via another
-mechanism, and operate on a canonical port.*
+mechanism such as a subsequent API call.*
+
+
+Definitions:
+
+  * Service: Something listening on a port running on a host.
+  * Service class: An ascii identifier corresponding to the service/project
+    name. A version number could be appended. Max 23 characters.
+  * Service port: The port the service is listening on
 
 
 Usage:
     # on devices that you wish to discover
-    Announcer('my_project_magic_string').start()
+    Announcer('my_project_name',service_port=80).start()
 
-    # on machine that must discover hosts
-    d = Discoverer('my_project_magic_string')
+    # on machine that must discover services
+    d = Discoverer('my_project_name')
     d.start()
-    hosts = d.get_hosts(wait=True)
+    services = d.get_services(wait=True)
 
     # ...at any time, preferably after wait
-    hosts = d.get_hosts()
+    services = d.get_services()
 
-`get_hosts` will only return hosts that are actively Announcing.
+`get_services` will only return services that are actively Announcing.
 
-sd01 works using a UDP broadcast of a magic string on an automatically chosen
-port 17823. A port can be specified, but bear in mind the services and
-discoverer must know it.
-
-
-* If multiple services are required to run on one host, and therefore use
-different ports the following mechanism is suggested:
-
-    1. Services start (in any order) and attempt bind to a base port
-    2. If the bind fails, increment port number by one and try again up to a limit of 10 (or so)
-    3. The discoverer should try to bind to the base port and all ports following up to the limit of 10
-
-This way, services don't have to be configured with individual ports
-explicitly. Note that ONE instance of sd01 should be running! The only the
-services should run on different ports!
+sd01 works using a UDP broadcast of a magic string on port 17823.
 
 """
 # TODO IPv6 (multicast based) support
@@ -77,7 +71,16 @@ except ImportError:
 
 log = getLogger(__name__)
 
+# deterministic packet size regardless of port. Service ID max 25 chars --
+# packet length is 32 bytes max to keep broadcast traffic low.
+PACKET_FORMAT = 'sd01{service_class:.23}{port:0>5}'
 
+# May be a problem with thousands of devices. A good compromise IMO -- 5
+# seconds is an acceptable wait IMO. Results in 6.4 bytes per second per
+# service.
+INTERVAL = 5
+
+PORT = 17823
 
 def forever_IOError(fn):
     @wraps(fn)
@@ -93,22 +96,17 @@ def forever_IOError(fn):
     return _fn
 
 
-
-class Base(Thread):
+class Announcer(Thread):
     daemon = True
 
-    def __init__(self, magic, interval=5, port=17823):
-        super(Base, self).__init__()
-        self.magic = str(magic).encode('ascii')
-        self.interval = int(interval)
+    def __init__(self, service_class, service_port):
+        super(Announcer, self).__init__()
+        self.service_class = service_class.encode('ascii')
+        self.service_port = int(service_port)
 
-        if self.interval < 1:
-            raise ValueError('Interval must be more than 1')
+        if 0 > self.service_port > 65535:
+            raise ValueError('Port number out of legal range')
 
-        self.port = port
-
-
-class Announcer(Base):
     @forever_IOError
     def run(self):
         # create UDP socket
@@ -116,49 +114,82 @@ class Announcer(Base):
         s.bind(('', 0))
         s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
+        magic = PACKET_FORMAT.format(
+                service_class=self.service_class,
+                port=self.service_port,
+                ).encode('ascii')
+
         while True:
             log.debug('Announcing on port %s with magic %s',
-                      self.port, self.magic)
-            s.sendto(self.magic, ('<broadcast>', self.port))
-            sleep(self.interval)
+                      PORT, magic)
+            s.sendto(magic, ('<broadcast>', self.port))
+            sleep(self.INTERVAL)
 
 
-class Discoverer(Base):
-    def __init__(self, *args, **kwargs):
-        super(Discoverer, self).__init__(*args, **kwargs)
+class Discoverer(Thread):
+    daemon = True
 
-        # map of host -> timestamp of last announcement
-        self.hosts = dict()
+    def __init__(self, service_class):
+        super(Discoverer, self).__init__()
+        self.service_class = service_class.encode('ascii')
+
+        # map of (host,port) -> timestamp of last announcement
+        self.services = dict()
 
         self.lock = Lock()
         self.running = False
+
 
     @forever_IOError
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
-        s.bind(('', self.port))
+        s.bind(('', PORT))
 
         self.running = True
 
+        magic = PACKET_FORMAT.format(
+                service_class=self.service_class,
+                port=0,
+                ).encode('ascii')
+
         while True:
-            data, addr = s.recvfrom(len(self.magic))
-            if data == self.magic:
+            data, addr = s.recvfrom(len(magic)+5)
+            if data.startswith(magic[:-5]):
                 host = addr[0]
-                log.debug('Discovered %s with magic %s', host, self.magic)
+
+                try:
+                    data = data.decode('ascii')
+                except ValueError:
+                    log.warn('Received invalid sd01 packet: non-ascii characters')
+                    continue
+
+                try:
+                    port = int(data[-5:])
+                except ValueError:
+                    log.warn('Received invalid sd01 packet: invalid port number')
+                    continue
+
+                if 0 > port > 65535:
+                    log.warn('Received invalid sd01 packet: port number out of legal range')
+                    continue
+
+                log.debug('Discovered %s on port %s', host, port)
+
                 with self.lock:
-                    self.hosts[host] = time()
+                    self.services[(host,port)] = time()
 
 
-    def get_hosts(self, wait=False):
+    def get_services(self, wait=False):
+        '''Returns a list of tuples (host,port) for active services'''
         if not self.running:
             raise RuntimeError(
                 'You must call start() first to start listening for announcements')
 
         if wait:
-            sleep(self.interval + 1)
+            sleep(self.INTERVAL + 1)
 
-        min_ts = time() - self.interval * 2
+        min_ts = time() - self.INTERVAL * 2
 
         with self.lock:
-            return [h for h, ts in self.hosts.items() if ts > min_ts]
+            return [h for h, ts in self.services.items() if ts > min_ts]
