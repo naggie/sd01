@@ -105,6 +105,8 @@ class Base(Thread):
         if self.interval < 1:
             raise ValueError('Interval must be more than 1')
 
+        self.port = port
+
 
 class Announcer(Base):
     @forever_IOError
