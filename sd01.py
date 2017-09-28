@@ -104,10 +104,6 @@ class NonAsciiCharacters(ValueError):
     pass
 
 
-class InvalidMagic(ValueError):
-    pass
-
-
 def forever_IOError(fn):
     @wraps(fn)
     def _fn(*args, **kwargs):
@@ -143,7 +139,8 @@ def decode(message, service_class):
     ).encode('ascii')[:-5]
 
     if not message.startswith(b'sd01'):
-        raise InvalidMagic()
+        # foreign protocol
+        return None
 
     if not message.startswith(prefix):
         # not matching this service_class
@@ -282,6 +279,10 @@ class DecodeTests(unittest.TestCase):
             decode(
                 message=u'sd01\xc3est99999'.encode('utf-8'),
                 service_class='test')
+
+    def test_foreign_message(self):
+        self.assertIsNone(decode(b'banana','test'))
+
 
 
 if __name__ == '__main__':
