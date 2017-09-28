@@ -167,11 +167,12 @@ class Discoverer(Thread):
                     log.warn('Received invalid sd01 packet: non-ascii characters')
                     continue
 
-                try:
-                    port = int(data[-5:])
-                except ValueError:
-                    log.warn('Received invalid sd01 packet: invalid port number')
+                # no whitespace or decimals
+                if not data[-5:].isdigit():
+                    log.warn('Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
                     continue
+
+                port = int(data[-5:])
 
                 if port < 0 or port > 65535:
                     log.warn(
