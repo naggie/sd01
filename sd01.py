@@ -97,14 +97,18 @@ PORT = 17823
 class InvalidPort(ValueError):
     pass
 
+
 class IllegalPort(ValueError):
     pass
+
 
 class NonAsciiCharacters(ValueError):
     pass
 
+
 class InvalidMagic(ValueError):
     pass
+
 
 def forever_IOError(fn):
     @wraps(fn)
@@ -120,7 +124,6 @@ def forever_IOError(fn):
     return _fn
 
 
-
 def encode(service_class, service_port):
     if service_port < 0 or service_port > 65535:
         raise IllegalPort()
@@ -134,12 +137,12 @@ def encode(service_class, service_port):
 
 
 def decode(data, service_class):
-    assert type(data) is bytes
+    assert isinstance(data, bytes)
 
     prefix = PACKET_FORMAT.format(
         service_class=service_class,
         service_port=0,
-        ).encode('ascii')[:-5]
+    ).encode('ascii')[:-5]
 
     if not data.startswith(b'sd01'):
         raise InvalidMagic()
@@ -231,13 +234,15 @@ class Discoverer(Thread):
             port = None
 
             try:
-                port = decode(data,self.service_class)
+                port = decode(data, self.service_class)
             except NonAsciiCharacters:
                 log.warn('Received invalid sd01 packet: non-ascii characters')
             except InvalidPort:
-                log.warn('Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
+                log.warn(
+                    'Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
             except IllegalPort:
-                log.warn('Received invalid sd01 packet: port number out of legal range')
+                log.warn(
+                    'Received invalid sd01 packet: port number out of legal range')
             except Truncated:
                 log.warn('Received truncated sd01 packet. Is port zero-padded?')
 
@@ -265,19 +270,21 @@ class Discoverer(Thread):
             return [h for h, ts in self.services.items() if ts > min_ts]
 
 
-
 class DecodeTests(unittest.TestCase):
     def test_invalid_port(self):
         with self.assertRaises(InvalidPort):
-            decode(data=b'sd01test00r22',service_class='test')
+            decode(data=b'sd01test00r22', service_class='test')
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            decode(data=b'sd01test99999',service_class='test')
+            decode(data=b'sd01test99999', service_class='test')
 
     def test_non_ascii(self):
         with self.assertRaises(NonAsciiCharacters):
-            decode(data=u'sd01\xc3est99999'.encode('utf-8'),service_class='test')
+            decode(
+                data=u'sd01\xc3est99999'.encode('utf-8'),
+                service_class='test')
+
 
 if __name__ == '__main__':
     unittest.main()
