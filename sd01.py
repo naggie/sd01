@@ -60,8 +60,6 @@ seconds.
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
 
-# TODO consistent packet / data / message wording
-
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
 from logging import getLogger
@@ -78,13 +76,13 @@ except ImportError:
 
 log = getLogger(__name__)
 
-# deterministic packet size regardless of port. Service ID max 25 chars --
-# packet length is 32 bytes max to keep broadcast traffic low.
-PACKET_FORMAT = 'sd01{service_class:.23}{service_port:0>5}'
-# if you update this, update PACKET_FORMAT service_class size too.
+# deterministic message size regardless of port. Service ID max 25 chars --
+# message length is 32 bytes max to keep broadcast traffic low.
+MESSAGE_FORMAT = 'sd01{service_class:.23}{service_port:0>5}'
+# if you update this, update MESSAGE_FORMAT service_class size too.
 # Note that this is recommended to be a (small) power of 2 for maximum
 # compatibility.
-MAX_PACKET_LENGTH = 32
+MAX_MESSAGE_LENGTH = 32
 
 # May be a problem with thousands of devices. A good compromise IMO -- 5
 # seconds is an acceptable wait IMO. Results in 6.4 bytes per second per
@@ -128,36 +126,36 @@ def encode(service_class, service_port):
     if service_port < 0 or service_port > 65535:
         raise IllegalPort()
 
-    data = PACKET_FORMAT.format(
+    message = MESSAGE_FORMAT.format(
         service_class=service_class,
         service_port=service_port,
     ).encode('ascii')
 
-    return data
+    return message
 
 
-def decode(data, service_class):
-    assert isinstance(data, bytes)
+def decode(message, service_class):
+    assert isinstance(message, bytes)
 
-    prefix = PACKET_FORMAT.format(
+    prefix = MESSAGE_FORMAT.format(
         service_class=service_class,
         service_port=0,
     ).encode('ascii')[:-5]
 
-    if not data.startswith(b'sd01'):
+    if not message.startswith(b'sd01'):
         raise InvalidMagic()
 
-    if not data.startswith(prefix):
+    if not message.startswith(prefix):
         # not matching this service_class
         return None
 
-    if len(data) != len(prefix) + 5:
+    if len(message) != len(prefix) + 5:
         # not matching this service_class because this service_class is a
         # prefix to another
         return None
 
     try:
-        data = data.decode('ascii')
+        message = message.decode('ascii')
     except ValueError:
         raise NonAsciiCharacters()
 
@@ -165,10 +163,10 @@ def decode(data, service_class):
     # `int`. Note that it is important to be strict to that other
     # implementations do not rely on undefined behaviour and break
     # later.
-    if not data[-5:].isdigit():
+    if not message[-5:].isdigit():
         raise InvalidPort()
 
-    port = int(data[-5:])
+    port = int(message[-5:])
 
     if port < 0 or port > 65535:
         raise IllegalPort()
@@ -195,12 +193,12 @@ class Announcer(Thread):
         s.bind(('', 0))
         s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        data = encode(self.service_class, self.service_port)
+        message = encode(self.service_class, self.service_port)
 
         while True:
-            log.debug('Announcing on port %s with data %s',
-                      PORT, data)
-            s.sendto(data, ('<broadcast>', PORT))
+            log.debug('Announcing on port %s with message %s',
+                      PORT, message)
+            s.sendto(message, ('<broadcast>', PORT))
             sleep(INTERVAL)
 
 
@@ -229,22 +227,22 @@ class Discoverer(Thread):
         while True:
             # bufsize should be a small power of 2 for maximum compatibility.
             # Note that this is a maximum size, so smaller messages are OK.
-            data, addr = s.recvfrom(MAX_PACKET_LENGTH)
+            message, addr = s.recvfrom(MAX_MESSAGE_LENGTH)
             host = addr[0]
             port = None
 
             try:
-                port = decode(data, self.service_class)
+                port = decode(message, self.service_class)
             except NonAsciiCharacters:
-                log.warn('Received invalid sd01 packet: non-ascii characters')
+                log.warn('Received invalid sd01 message: non-ascii characters')
             except InvalidPort:
                 log.warn(
-                    'Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
+                    'Received invalid sd01 message: invalid port number. Must be 5 digit, zero padded.')
             except IllegalPort:
                 log.warn(
-                    'Received invalid sd01 packet: port number out of legal range')
+                    'Received invalid sd01 message: port number out of legal range')
             except Truncated:
-                log.warn('Received truncated sd01 packet. Is port zero-padded?')
+                log.warn('Received truncated sd01 message. Is port zero-padded?')
 
             # a different service_class or invalid message (warn above)
             if not port:
@@ -273,16 +271,16 @@ class Discoverer(Thread):
 class DecodeTests(unittest.TestCase):
     def test_invalid_port(self):
         with self.assertRaises(InvalidPort):
-            decode(data=b'sd01test00r22', service_class='test')
+            decode(message=b'sd01test00r22', service_class='test')
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            decode(data=b'sd01test99999', service_class='test')
+            decode(message=b'sd01test99999', service_class='test')
 
     def test_non_ascii(self):
         with self.assertRaises(NonAsciiCharacters):
             decode(
-                data=u'sd01\xc3est99999'.encode('utf-8'),
+                message=u'sd01\xc3est99999'.encode('utf-8'),
                 service_class='test')
 
 
