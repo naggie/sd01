@@ -74,7 +74,7 @@ log = getLogger(__name__)
 
 # deterministic packet size regardless of port. Service ID max 25 chars --
 # packet length is 32 bytes max to keep broadcast traffic low.
-PACKET_FORMAT = 'sd01{service_class:.23}{port:0>5}'
+PACKET_FORMAT = 'sd01{service_class:.23}{service_port:0>5}'
 
 # May be a problem with thousands of devices. A good compromise IMO -- 5
 # seconds is an acceptable wait IMO. Results in 6.4 bytes per second per
@@ -103,10 +103,11 @@ class Announcer(Thread):
 
     def __init__(self, service_class, service_port):
         super(Announcer, self).__init__()
-        self.service_class = service_class.encode('ascii')
+        service_class.encode('ascii')  # validate
+        self.service_class = service_class
         self.service_port = int(service_port)
 
-        if 0 > self.service_port > 65535:
+        if self.service_port < 0 or self.service_port > 65535:
             raise ValueError('Port number out of legal range')
 
     @forever_IOError
@@ -118,14 +119,14 @@ class Announcer(Thread):
 
         magic = PACKET_FORMAT.format(
             service_class=self.service_class,
-            port=self.service_port,
+            service_port=self.service_port,
         ).encode('ascii')
 
         while True:
             log.debug('Announcing on port %s with magic %s',
                       PORT, magic)
-            s.sendto(magic, ('<broadcast>', self.port))
-            sleep(self.INTERVAL)
+            s.sendto(magic, ('<broadcast>', PORT))
+            sleep(INTERVAL)
 
 
 class Discoverer(Thread):
@@ -133,7 +134,8 @@ class Discoverer(Thread):
 
     def __init__(self, service_class):
         super(Discoverer, self).__init__()
-        self.service_class = service_class.encode('ascii')
+        service_class.encode('ascii')  # validate
+        self.service_class = service_class
 
         # map of (host,port) -> timestamp of last announcement
         self.services = dict()
@@ -151,7 +153,7 @@ class Discoverer(Thread):
 
         magic = PACKET_FORMAT.format(
             service_class=self.service_class,
-            port=0,
+            service_port=0,
         ).encode('ascii')
 
         while True:
@@ -171,7 +173,7 @@ class Discoverer(Thread):
                     log.warn('Received invalid sd01 packet: invalid port number')
                     continue
 
-                if 0 > port > 65535:
+                if port < 0 or port > 65535:
                     log.warn(
                         'Received invalid sd01 packet: port number out of legal range')
                     continue
@@ -188,9 +190,9 @@ class Discoverer(Thread):
                 'You must call start() first to start listening for announcements')
 
         if wait:
-            sleep(self.INTERVAL + 1)
+            sleep(INTERVAL + 1)
 
-        min_ts = time() - self.INTERVAL * 2
+        min_ts = time() - INTERVAL * 2
 
         with self.lock:
             return [h for h, ts in self.services.items() if ts > min_ts]
