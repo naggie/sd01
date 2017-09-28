@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-REFERENCE IMPLEMENTATION
+REFERENCE IMPLEMENTATION : Strict and verbose.
 
 A bare minimal service discovery system.
 
@@ -67,6 +67,7 @@ from threading import Thread, Lock
 from logging import getLogger
 from time import sleep
 from functools import wraps
+import unittest
 
 try:
     # Python 3.x
@@ -133,6 +134,8 @@ def encode(service_class, service_port):
 
 
 def decode(data, service_class):
+    assert type(data) is bytes
+
     prefix = PACKET_FORMAT.format(
         service_class=service_class,
         service_port=0,
@@ -260,3 +263,21 @@ class Discoverer(Thread):
 
         with self.lock:
             return [h for h, ts in self.services.items() if ts > min_ts]
+
+
+
+class DecodeTests(unittest.TestCase):
+    def test_invalid_port(self):
+        with self.assertRaises(InvalidPort):
+            decode(data=b'sd01test00r22',service_class='test')
+
+    def test_illegal_port(self):
+        with self.assertRaises(IllegalPort):
+            decode(data=b'sd01test99999',service_class='test')
+
+    def test_non_ascii(self):
+        with self.assertRaises(NonAsciiCharacters):
+            decode(data=u'sd01\xc3est99999'.encode('utf-8'),service_class='test')
+
+if __name__ == '__main__':
+    unittest.main()
