@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
+REFERENCE IMPLEMENTATION
+
 A bare minimal service discovery system.
 
 Divulges IPv4 addresses and ports of services running on the same subnet with
@@ -57,6 +59,9 @@ seconds.
 # TODO IPv6 (multicast based) support
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
+
+# TODO consistent packet / data / message wording
+
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
 from logging import getLogger
@@ -75,6 +80,10 @@ log = getLogger(__name__)
 # deterministic packet size regardless of port. Service ID max 25 chars --
 # packet length is 32 bytes max to keep broadcast traffic low.
 PACKET_FORMAT = 'sd01{service_class:.23}{service_port:0>5}'
+# if you update this, update PACKET_FORMAT service_class size too.
+# Note that this is recommended to be a (small) power of 2 for maximum
+# compatibility.
+MAX_PACKET_LENGTH = 32
 
 # May be a problem with thousands of devices. A good compromise IMO -- 5
 # seconds is an acceptable wait IMO. Results in 6.4 bytes per second per
@@ -83,6 +92,18 @@ INTERVAL = 5
 
 PORT = 17823
 
+
+class InvalidPort(ValueError):
+    pass
+
+class IllegalPort(ValueError):
+    pass
+
+class NonAsciiCharacters(ValueError):
+    pass
+
+class InvalidMagic(ValueError):
+    pass
 
 def forever_IOError(fn):
     @wraps(fn)
@@ -96,6 +117,57 @@ def forever_IOError(fn):
                 sleep(5)
 
     return _fn
+
+
+
+def encode(service_class, service_port):
+    if service_port < 0 or service_port > 65535:
+        raise IllegalPort()
+
+    data = PACKET_FORMAT.format(
+        service_class=service_class,
+        service_port=service_port,
+    ).encode('ascii')
+
+    return data
+
+
+def decode(data, service_class):
+    prefix = PACKET_FORMAT.format(
+        service_class=service_class,
+        service_port=0,
+        ).encode('ascii')[:-5]
+
+    if not data.startswith(b'sd01'):
+        raise InvalidMagic()
+
+    if not data.startswith(prefix):
+        # not matching this service_class
+        return None
+
+    if len(data) != len(prefix) + 5:
+        # not matching this service_class because this service_class is a
+        # prefix to another
+        return None
+
+    try:
+        data = data.decode('ascii')
+    except ValueError:
+        raise NonAsciiCharacters()
+
+    # no whitespace or decimals, unlike attempting to parse with
+    # `int`. Note that it is important to be strict to that other
+    # implementations do not rely on undefined behaviour and break
+    # later.
+    if not data[-5:].isdigit():
+        raise InvalidPort()
+
+    port = int(data[-5:])
+
+    if port < 0 or port > 65535:
+        raise IllegalPort()
+
+    return port
 
 
 class Announcer(Thread):
@@ -117,15 +189,12 @@ class Announcer(Thread):
         s.bind(('', 0))
         s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        magic = PACKET_FORMAT.format(
-            service_class=self.service_class,
-            service_port=self.service_port,
-        ).encode('ascii')
+        data = encode(self.service_class, self.service_port)
 
         while True:
-            log.debug('Announcing on port %s with magic %s',
-                      PORT, magic)
-            s.sendto(magic, ('<broadcast>', PORT))
+            log.debug('Announcing on port %s with data %s',
+                      PORT, data)
+            s.sendto(data, ('<broadcast>', PORT))
             sleep(INTERVAL)
 
 
@@ -151,38 +220,32 @@ class Discoverer(Thread):
 
         self.running = True
 
-        magic = PACKET_FORMAT.format(
-            service_class=self.service_class,
-            service_port=0,
-        ).encode('ascii')
-
         while True:
-            data, addr = s.recvfrom(len(magic) + 5)
-            if data.startswith(magic[:-5]):
-                host = addr[0]
+            # bufsize should be a small power of 2 for maximum compatibility.
+            # Note that this is a maximum size, so smaller messages are OK.
+            data, addr = s.recvfrom(MAX_PACKET_LENGTH)
+            host = addr[0]
+            port = None
 
-                try:
-                    data = data.decode('ascii')
-                except ValueError:
-                    log.warn('Received invalid sd01 packet: non-ascii characters')
-                    continue
+            try:
+                port = decode(data,self.service_class)
+            except NonAsciiCharacters:
+                log.warn('Received invalid sd01 packet: non-ascii characters')
+            except InvalidPort:
+                log.warn('Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
+            except IllegalPort:
+                log.warn('Received invalid sd01 packet: port number out of legal range')
+            except Truncated:
+                log.warn('Received truncated sd01 packet. Is port zero-padded?')
 
-                # no whitespace or decimals
-                if not data[-5:].isdigit():
-                    log.warn('Received invalid sd01 packet: invalid port number. Must be 5 digit, zero padded.')
-                    continue
+            # a different service_class or invalid message (warn above)
+            if not port:
+                continue
 
-                port = int(data[-5:])
+            log.debug('Discovered %s on port %s', host, port)
 
-                if port < 0 or port > 65535:
-                    log.warn(
-                        'Received invalid sd01 packet: port number out of legal range')
-                    continue
-
-                log.debug('Discovered %s on port %s', host, port)
-
-                with self.lock:
-                    self.services[(host, port)] = time()
+            with self.lock:
+                self.services[(host, port)] = time()
 
     def get_services(self, wait=False):
         '''Returns a list of tuples (host,port) for active services'''
