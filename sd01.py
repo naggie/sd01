@@ -56,7 +56,8 @@ sd01 works using a UDP broadcast of a magic string on port 17823 every 5
 seconds.
 
 """
-# TODO IPv6 (multicast based) support
+# TODO decide when to throw an Exception vs return None. Eg -- InvalidMagic
+# TODO IPv6 (multicast based) support?
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
 
@@ -104,6 +105,10 @@ class NonAsciiCharacters(ValueError):
     pass
 
 
+class InvalidMagic(ValueError):
+    pass
+
+
 def forever_IOError(fn):
     @wraps(fn)
     def _fn(*args, **kwargs):
@@ -139,8 +144,8 @@ def decode(message, service_class):
     ).encode('ascii')[:-5]
 
     if not message.startswith(b'sd01'):
-        # foreign protocol
-        return None
+        # foreign protocol etc
+        raise InvalidMagic()
 
     if not message.startswith(prefix):
         # not matching this service_class
@@ -240,6 +245,8 @@ class Discoverer(Thread):
                     'Received invalid sd01 message: port number out of legal range')
             except Truncated:
                 log.warn('Received truncated sd01 message. Is port zero-padded?')
+            except InvalidMagic:
+                log.warn('Received message without sd01 magic prefix')
 
             # a different service_class or invalid message (warn above)
             if not port:
@@ -281,7 +288,8 @@ class DecodeTests(unittest.TestCase):
                 service_class='test')
 
     def test_foreign_message(self):
-        self.assertIsNone(decode(b'banana','test'))
+        with self.assertRaises(InvalidMagic):
+            decode(b'banana','test')
 
 
 
