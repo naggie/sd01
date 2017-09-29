@@ -138,14 +138,19 @@ def encode(service_class, service_port):
 def decode(message, service_class):
     assert isinstance(message, bytes)
 
-    prefix = MESSAGE_FORMAT.format(
-        service_class=service_class,
-        service_port=0,
-    ).encode('ascii')[:-5]
-
     if not message.startswith(b'sd01'):
         # foreign protocol etc
         raise InvalidMagic()
+
+    try:
+        message = message.decode('ascii')
+    except ValueError:
+        raise NonAsciiCharacters()
+
+    prefix = MESSAGE_FORMAT.format(
+        service_class=service_class,
+        service_port=0,
+    )[:-5]
 
     if not message.startswith(prefix):
         # not matching this service_class
@@ -156,10 +161,6 @@ def decode(message, service_class):
         # prefix to another
         return None
 
-    try:
-        message = message.decode('ascii')
-    except ValueError:
-        raise NonAsciiCharacters()
 
     # no whitespace or decimals, unlike attempting to parse with
     # `int`. Note that it is important to be strict to that other
