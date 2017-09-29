@@ -79,8 +79,8 @@ log = getLogger(__name__)
 
 # deterministic message size regardless of port. Service ID max 25 chars --
 # message length is 32 bytes max to keep broadcast traffic low.
-MESSAGE_FORMAT = 'sd01{service_class:.23}{service_port:0>5}'
-# if you update this, update MESSAGE_FORMAT service_class size too.
+MESSAGE_FORMAT = 'sd01{service_class}{service_port:0>5}'
+
 # Note that this is recommended to be a (small) power of 2 for maximum
 # compatibility.
 MAX_MESSAGE_LENGTH = 32
@@ -124,6 +124,9 @@ def forever_IOError(fn):
 
 
 def encode(service_class, service_port):
+    if len(service_class) > MAX_MESSAGE_LENGTH - 9:
+        raise ValueError('Service name is too long.')
+
     if service_port < 0 or service_port > 65535:
         raise IllegalPort()
 
@@ -160,7 +163,6 @@ def decode(message, service_class):
         # not matching this service_class because this service_class is a
         # prefix to another
         return None
-
 
     # no whitespace or decimals, unlike attempting to parse with
     # `int`. Note that it is important to be strict to that other
@@ -244,8 +246,6 @@ class Discoverer(Thread):
             except IllegalPort:
                 log.warn(
                     'Received invalid sd01 message: port number out of legal range')
-            except Truncated:
-                log.warn('Received truncated sd01 message. Is port zero-padded?')
             except InvalidMagic:
                 log.warn('Received message without sd01 magic prefix')
 
@@ -292,6 +292,21 @@ class DecodeTests(unittest.TestCase):
         with self.assertRaises(InvalidMagic):
             decode(b'banana','test')
 
+    def test_prefix_service_name(self):
+        self.assertIsNone(decode(b'sd01foobar00000','foo'))
+
+
+class EncodeTests(unittest.TestCase):
+    def test_valid(self):
+        self.assertEqual(encode('test123',80),b'sd01test12300080')
+
+    def test_long_service_name(self):
+        with self.assertRaises(ValueError):
+            encode('a'*40,0)
+
+    def test_illegal_port(self):
+        with self.assertRaises(IllegalPort):
+            encode('test',99999)
 
 
 if __name__ == '__main__':
