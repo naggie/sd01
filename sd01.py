@@ -290,23 +290,23 @@ class DecodeTests(unittest.TestCase):
 
     def test_foreign_message(self):
         with self.assertRaises(InvalidMagic):
-            decode(b'banana','test')
+            decode(b'banana', 'test')
 
     def test_prefix_service_name(self):
-        self.assertIsNone(decode(b'sd01foobar00000','foo'))
+        self.assertIsNone(decode(b'sd01foobar00000', 'foo'))
 
 
 class EncodeTests(unittest.TestCase):
     def test_valid(self):
-        self.assertEqual(encode('test123',80),b'sd01test12300080')
+        self.assertEqual(encode('test123', 80), b'sd01test12300080')
 
     def test_long_service_name(self):
         with self.assertRaises(ValueError):
-            encode('a'*40,0)
+            encode('a' * 40, 0)
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            encode('test',99999)
+            encode('test', 99999)
 
 
 if __name__ == '__main__':
