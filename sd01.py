@@ -56,7 +56,6 @@ sd01 works using a UDP broadcast of a magic string on port 17823 every 5
 seconds.
 
 """
-# TODO decide when to throw an Exception vs return None. Eg -- InvalidMagic
 # TODO IPv6 (multicast based) support?
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
