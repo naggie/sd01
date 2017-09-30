@@ -204,13 +204,15 @@ class Discoverer(Thread):
         self.lock = Lock()
         self.running = False
 
+    def start(self, *args, **kwargs):
+        super(Discoverer, self).start(*args, **kwargs)
+        self.running = True
+
     @forever_IOError
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
         s.bind(('', PORT))
-
-        self.running = True
 
         while True:
             # bufsize should be a small power of 2 for maximum compatibility.
@@ -293,6 +295,23 @@ class EncodeTests(unittest.TestCase):
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
             encode('test', 99999)
+
+
+class SocketTests(unittest.TestCase):
+    # TODO a method of stopping an announcer, or write/read from socket directly
+    def test_discovery(self):
+        service_class = str(time())
+        announcer = Announcer(service_class, 1234)
+        announcer.start()
+        discoverer = Discoverer(service_class)
+        discoverer.start()
+
+        services = discoverer.get_services(wait=True)
+        self.assertEqual(len(services), 1)
+        self.assertEqual(services[0][1], 1234)
+
+    # TODO: test a service going offline
+    # def test_service_offline
 
 
 if __name__ == '__main__':
