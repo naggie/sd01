@@ -294,6 +294,9 @@ class DecodeTests(unittest.TestCase):
     def test_prefix_service_name(self):
         self.assertIsNone(decode(b'sd01foobar00000', 'foo'))
 
+    def test_different_service_name(self):
+        self.assertIsNone(decode(b'sd01bar00000', 'foo'))
+
 
 class EncodeTests(unittest.TestCase):
     def test_valid(self):
