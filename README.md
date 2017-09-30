@@ -1,7 +1,7 @@
 sd01 is a minimal service discovery protocol with strict implementation in the
 following languages so far:
 
-* Python 2/3
+* Python 2/3 (reference implementation)
 
 
 Planned languages:
@@ -10,11 +10,14 @@ Planned languages:
 * Go
 * ...
 
+sd01 reveals the host (IP) and port for any similar services running.
 
 sd01 works by sending a message specific to the service name and service port
-over a UDP broadcast, port 17823.
+over a UDP broadcast, port 17823. As a UDP broadcast is used, only hosts on the
+same subnet can discover. The service host (IP) is taken from the UDP packet
+source attribute.
 
-
+An IPv6 and/or IPv4 multicast extension is being considered for version 2.
 
 
 # Why?
@@ -43,6 +46,9 @@ sd01 works nicely with an RPC mechanism such as gRPC.
 
 ## Message
 
+A host emits a sd01 message every 5 seconds. If an announcer has not seen the
+sd01 message for 10 seconds, the host is considered offline.
+
 ```
 sd01[service_class][service_port]
 ```
@@ -62,4 +68,19 @@ sd01lightcontrollerv200080
 ```
 
 
-Both the announcer and discoverer are aware of the `service_class` in advance. 
+Both the announcer and discoverer are aware of the `service_class` in advance.
+
+## Reference implementation
+
+`sd01.py` is the reference implementation. Other implementations are expected
+to follow the same design which consists of:
+
+  1. Unit tests for valid and invalid messages. The implementation must be
+     strict to avoid replying on undefined behaviour.
+  2. Threaded announcer and discoverer
+  3. `Discoverer.get_services`, a thread-safe method to return online
+     (host,port) pairs.
+  4. Invalid sd01 messages are handled as errors (although these errors should
+     not crash the program, they may be logged)
+  5. Valid sd01 messages from a different service_class are ignored
+  5. Debug logging

@@ -18,24 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-REFERENCE IMPLEMENTATION : Strict and verbose.
-
 A bare minimal service discovery system.
 
-Divulges IPv4 addresses and ports of services running on the same subnet with
-the same "service id" ascii string in Announce mode.
-
-By design, sd01 does not support service descriptions. It is intended that the
-device will be interrogated by the discoverer post-discovery via another
-mechanism such as a subsequent API call.*
-
-
-Definitions:
-
-  * Service: Something listening on a port running on a host.
-  * Service class: An ascii identifier corresponding to the service/project
-    name. A version number could be appended. Max 23 characters.
-  * Service port: The port the service is listening on
+REFERENCE IMPLEMENTATION : Strict and verbose. See README.md for protocol
+specification.
 
 
 Usage:
@@ -52,8 +38,6 @@ Usage:
 
 `get_services` will only return services that are actively Announcing.
 
-sd01 works using a UDP broadcast of a magic string on port 17823 every 5
-seconds.
 
 """
 # TODO IPv6 (multicast based) support?
