@@ -23,7 +23,7 @@ An IPv6 and/or IPv4 multicast extension is being considered for version 2.
 # Why?
 
 There are many service discovery systems out there, most of them are much more
-complicated than normally required. May systems implement a custom UDP
+complicated than normally required. Many systems implement a custom UDP
 broadcast; sd01 is just a standard way to do so, cross-platform.
 
 
