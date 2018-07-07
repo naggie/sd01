@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
-	"github.com/naggie/sd01"
+	"github.com/naggie/sd01/go"
 )
 
 func main() {
@@ -23,13 +24,19 @@ func main() {
 	// Wait for interrupt or discoveries.
 	sig := make(chan os.Signal)
 	signal.Notify(sig, os.Interrupt)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-sig:
 			return
 
-		case service := <-sd.Discoveries():
-			fmt.Println("service found at", service.String())
+		case <-ticker.C:
+			services := sd.GetServices()
+			fmt.Printf("found %d services:\n", len(services))
+			for _, service := range services {
+				fmt.Printf("  - %s\n", service.String())
+			}
 		}
 	}
 }

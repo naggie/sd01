@@ -11,32 +11,43 @@ import (
 )
 
 const (
-	// Timeout between discovery socket polling.
-	Timeout = 2 * time.Second
+	// Timeout after which a discovered service is marked offline.
+	Timeout = 2 * Interval
 )
 
-// Discoverer implements sd01 service discovery and provides a channel to
-// receive new discoveries.
+// Discoverer implements sd01 service discovery and provides a list of recently
+// discovered services.
 type Discoverer struct {
-	name        string
-	discoveries chan Service
-	wg          *sync.WaitGroup
-	stop        int32
+	name       string
+	services   map[string]Service
+	servicesMu sync.RWMutex
+	wg         sync.WaitGroup
+	stop       int32
 }
 
 // NewDiscoverer returns a new Discoverer with name as the service filter.
 // Matching service discoveries will be reported via the Discoveries channel.
 func NewDiscoverer(name string) *Discoverer {
 	return &Discoverer{
-		name:        name,
-		discoveries: make(chan Service),
-		wg:          &sync.WaitGroup{},
+		name:     name,
+		services: make(map[string]Service),
 	}
 }
 
-// Discoveries returns a channel on which discovered services are reported.
-func (d *Discoverer) Discoveries() <-chan Service {
-	return d.discoveries
+// GetServices returns a list of recently discovered services.
+func (d *Discoverer) GetServices() []Service {
+	d.servicesMu.RLock()
+	defer d.servicesMu.RUnlock()
+
+	var services []Service
+	now := time.Now()
+	for _, s := range d.services {
+		if now.Sub(s.LastSeen) < Timeout {
+			services = append(services, s)
+		}
+	}
+
+	return services
 }
 
 // Start the Discoverer. Remember to call Stop when finished.
@@ -69,33 +80,37 @@ func (d *Discoverer) run(conn net.PacketConn) {
 	buf := make([]byte, 64)
 
 	for atomic.LoadInt32(&d.stop) == 0 {
-		err := conn.SetReadDeadline(time.Now().Add(Timeout))
+		err := conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "sd01.announcer: failed to set read deadline:", err)
+			fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to set read deadline:", err)
 			time.Sleep(Timeout)
 		} else {
 			buflen, addr, err := conn.ReadFrom(buf)
 			if err != nil {
 				if e, ok := err.(net.Error); ok && !e.Timeout() {
-					fmt.Fprintln(os.Stderr, "sd01.announcer: failed to read beacon:", err)
+					fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to read beacon:", err)
 				}
 			} else {
 				if buflen == 0 || buflen > 32 {
-					fmt.Fprintf(os.Stderr, "sd01.announcer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+					fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 				} else if string(buf[:4]) != "sd01" {
-					fmt.Fprintf(os.Stderr, "sd01.announcer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+					fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 				} else {
 					bufstr := string(buf[:buflen])
 					service := bufstr[4 : len(bufstr)-5]
 					portstr := bufstr[len(bufstr)-5:]
 					portnum, err := strconv.Atoi(portstr)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "sd01.announcer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 					} else if service == d.name {
-						select {
-						case d.discoveries <- Service{Addr: addr.(*net.UDPAddr), Port: portnum}:
-						default:
+						d.servicesMu.Lock()
+						discovered := Service{
+							Addr:     addr.(*net.UDPAddr),
+							Port:     portnum,
+							LastSeen: time.Now(),
 						}
+						d.services[discovered.String()] = discovered
+						d.servicesMu.Unlock()
 					}
 				}
 			}
