@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/naggie/sd01"
+	"github.com/naggie/sd01/go"
 )
 
 func main() {
