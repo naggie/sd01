@@ -26,7 +26,7 @@ type Discoverer struct {
 }
 
 // NewDiscoverer returns a new Discoverer with name as the service filter.
-// Matching service discoveries will be reported via the Discoveries channel.
+// Matching service discoveries will be reported via the GetServices method
 func NewDiscoverer(name string) *Discoverer {
 	return &Discoverer{
 		name:     name,

@@ -10,7 +10,7 @@ import (
 
 const (
 	// Interval between announcements.
-	Interval = 1 * time.Second
+	Interval = 5 * time.Second
 
 	// Port is the sd01 service discovery port number.
 	Port = 17823
