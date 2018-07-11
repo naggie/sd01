@@ -8,7 +8,7 @@ import (
 
 // Service provides information about a remote service.
 type Service struct {
-	IP       *net.IP
+	IP       net.IP
 	Port     int
 	LastSeen time.Time
 }
