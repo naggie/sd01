@@ -109,7 +109,11 @@ func (d *Discoverer) run(conn net.PacketConn) {
 							Port:     portnum,
 							LastSeen: time.Now(),
 						}
-						d.services[discovered.String()] = discovered
+						key := discovered.String()
+						if _, exists := d.services[key]; !exists {
+							fmt.Fprintln(os.Stderr, "sd01.discoverer: New %v discovered at %v", d.name, key)
+						}
+						d.services[key] = discovered
 						d.servicesMu.Unlock()
 					}
 				}
