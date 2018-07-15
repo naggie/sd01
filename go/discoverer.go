@@ -23,6 +23,7 @@ type Discoverer struct {
 	servicesMu sync.RWMutex
 	wg         sync.WaitGroup
 	stop       int32
+	Debug      bool
 }
 
 // NewDiscoverer returns a new Discoverer with name as the service filter.
@@ -110,7 +111,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 							LastSeen: time.Now(),
 						}
 						key := discovered.String()
-						if _, exists := d.services[key]; !exists {
+						if _, exists := d.services[key]; !exists && d.Debug {
 							fmt.Fprintln(os.Stderr, "sd01.discoverer: New %v discovered at %v", d.name, key)
 						}
 						d.services[key] = discovered
