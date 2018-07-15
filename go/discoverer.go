@@ -116,7 +116,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 						}
 						key := discovered.String()
 						if _, exists := d.services[key]; !exists && d.Debug {
-							fmt.Fprintln(os.Stderr, "sd01.discoverer: New %v discovered at %v", d.name, key)
+							fmt.Fprintf(os.Stderr, "sd01.discoverer: New %v discovered at %v\n", d.name, key)
 						}
 						d.services[key] = discovered
 						d.servicesMu.Unlock()
