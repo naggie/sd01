@@ -36,7 +36,11 @@ func NewDiscoverer(name string) *Discoverer {
 }
 
 // GetServices returns a list of recently discovered services.
-func (d *Discoverer) GetServices() []Service {
+func (d *Discoverer) GetServices(wait bool) []Service {
+	if wait {
+		time.Sleep(Timeout)
+	}
+
 	d.servicesMu.RLock()
 	defer d.servicesMu.RUnlock()
 
