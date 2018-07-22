@@ -1,13 +1,28 @@
-sd01 is a minimal service discovery protocol with strict implementation in the
-following languages so far:
+sd01 is a minimal service discovery protocol with strict implementation.
 
+Developement status: Beta. Suitable for production but test coverage needs to
+be improved. #10 may result inn a breaking change to the protocol.
+
+
+### Features
+1. Advertisement of a service identified by a service type
+2. Advertisement of port of service
+3. Heartbeat/timeout mechanism to detect currently active services
+
+
+### Non-features
+1. No service metadata (instance name or capabilites, for example). This should
+   be implemented out of band by the protocol the service uses itself.
+
+
+#  Implementations
 * Python 2/3 (reference implementation)
+* Go
 
 
 Planned languages:
 
 * Embedded C
-* Go
 * ...
 
 sd01 reveals the host (IP) and port for any similar services running.
