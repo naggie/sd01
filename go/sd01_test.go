@@ -23,6 +23,7 @@ func TestDiscovery(t *testing.T) {
 
 	announcer.Stop()
 	time.Sleep(Timeout+time.Second)
+	services = discoverer.GetServices(false)
 
 	if len(services) != 0 {
 		t.Errorf("Found %v services, expected 0 after timeout", len(services))
