@@ -22,7 +22,10 @@ func TestDiscovery(t *testing.T) {
 	}
 
 	announcer.Stop()
-	time.Sleep(time.Second)
+
+	time.Sleep(Timeout+time.Second)
+  
+	services = discoverer.GetServices(false)
 
 	services = discoverer.GetServices(true)
 	if len(services) != 0 {

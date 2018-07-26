@@ -1,5 +1,7 @@
 sd01 is a minimal service discovery protocol with strict implementation.
 
+[![Build Status](https://travis-ci.org/naggie/sd01.svg?branch=master)](https://travis-ci.org/naggie/sd01)
+
 Developement status: Beta. Suitable for production but test coverage needs to
 be improved. #10 may result inn a breaking change to the protocol.
 
