@@ -15,18 +15,20 @@ func TestDiscovery(t *testing.T) {
 	defer discoverer.Stop()
 
 	services := discoverer.GetServices(true)
-	t.Logf("Services: %v", services)
+	t.Logf("Services: %+v", services)
 
 	if len(services) != 1 {
-		t.Errorf("Found %v services, expected 1", len(services))
+		t.Errorf("Found %d services, expected 1", len(services))
 	}
 
 	announcer.Stop()
+
 	time.Sleep(Timeout+time.Second)
+  
 	services = discoverer.GetServices(false)
 
+	services = discoverer.GetServices(true)
 	if len(services) != 0 {
-		t.Errorf("Found %v services, expected 0 after timeout", len(services))
+		t.Errorf("Found %d services, expected 0 after timeout", len(services))
 	}
-
 }
