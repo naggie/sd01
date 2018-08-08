@@ -5,6 +5,9 @@ sd01 is a minimal service discovery protocol with strict implementation.
 Developement status: Beta. Suitable for production but test coverage needs to
 be improved. #10 may result inn a breaking change to the protocol.
 
+sd01 is an alternative to [mDNS](https://en.wikipedia.org/wiki/Multicast_DNS)
+which is implemented by Bonjour/Ahahi.
+
 
 ### Features
 1. Advertisement of a service identified by a service type
