@@ -10,7 +10,9 @@ import (
 
 const (
 	// Interval between announcements.
-	Interval = 6 * time.Second
+	defaultInterval = 5 * time.Second
+	minInterval = 5 * time.Second
+	maxInterval = 60 * time.Second
 
 	// Port is the sd01 service discovery port number.
 	Port = 17823
@@ -26,6 +28,7 @@ type Announcer struct {
 	port int
 	wg   *sync.WaitGroup
 	stop chan struct{}
+	interval int
 }
 
 // NewAnnouncer returns a new Announcer and published beacons containing the
@@ -38,6 +41,7 @@ func NewAnnouncer(name string, port int) *Announcer {
 		name: name,
 		port: port,
 		wg:   &sync.WaitGroup{},
+		interval: defaultInterval,
 	}
 }
 
@@ -68,6 +72,13 @@ func (a *Announcer) Start() error {
 	go a.run(conn, dest, message)
 
 	return nil
+}
+
+func (a *Announcer) SetInterval(interval int) {
+	if (interval < minInterval || interval > maxInterval) {
+		panic("Specified interval out of range")
+	}
+	a.interval = interval
 }
 
 // Stop the Announcer.

@@ -68,7 +68,7 @@ sd01 works nicely with an RPC mechanism such as gRPC.
 
 ## Message
 
-A host emits a sd01 message at least every 60 seconds. If an announcer has not
+A host emits a sd01 message every 5 to 60 seconds. If an announcer has not
 seen the sd01 message for 600 seconds, the host is considered non-existent.
 
 ```
