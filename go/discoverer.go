@@ -97,7 +97,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 					fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to read beacon:", err)
 				}
 			} else {
-				if buflen == 0 || buflen > 32 {
+				if buflen == 0 || buflen > maxMessageLength {
 					fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 				} else if string(buf[:4]) != "sd01" {
 					fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())

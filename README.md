@@ -77,7 +77,7 @@ sd01[service_class][service_port]
 
 Where, without brackets:
 
-  1. The total message length is no more than 32 bytes (23 chars for service_class)
+  1. The total message length is no more than 64 bytes (55 chars for service_class)
   2. The entire message is composed of ASCII characters only
   3. The message is prefixed with `sd01`
   4. The message the service port, 5 digit, zero padded

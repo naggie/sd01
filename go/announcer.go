@@ -19,7 +19,7 @@ const (
 
 	// maxMessageLength is the maximum allowed message length for sd01 packets.
 	// This is intended to keep broadcast network traffic to a minimum.
-	maxMessageLength = 32
+	maxMessageLength = 64
 )
 
 // Announcer implements sd01 service announcement.
