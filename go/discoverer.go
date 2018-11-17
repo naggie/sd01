@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	// Timeout after which a discovered service is marked offline.
-	Timeout = 2 * Interval
+	// Timeout after which a discovered service is considered non-existent.
+	// Defined by protocol.
+	Timeout = 600 * time.Second
 )
 
 // Discoverer implements sd01 service discovery and provides a list of recently

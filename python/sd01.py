@@ -68,10 +68,8 @@ MESSAGE_FORMAT = 'sd01{service_class}{service_port:0>5}'
 # compatibility.
 MAX_MESSAGE_LENGTH = 32
 
-# May be a problem with thousands of devices. A good compromise IMO -- 5
-# seconds is an acceptable wait IMO. Results in 6.4 bytes per second per
-# service.
-INTERVAL = 5
+INTERVAL = 6
+TIMEOUT = 600
 
 PORT = 17823
 
@@ -252,7 +250,7 @@ class Discoverer(Thread):
         if wait:
             sleep(INTERVAL + 1)
 
-        min_ts = time() - INTERVAL * 2
+        min_ts = time() - TIMEOUT
 
         with self.lock:
             return [h for h, ts in self.services.items() if ts > min_ts]

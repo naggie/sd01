@@ -10,9 +10,8 @@ which is implemented by Bonjour/Ahahi.
 
 
 ### Features
-1. Advertisement of a service identified by a service type
-2. Advertisement of port of service
-3. Heartbeat/timeout mechanism to detect currently active services
+1. Advertisement of a IP + port for a given service by name
+2. Timeout mechanism to remove services that have disappeared
 
 
 ### Non-features
@@ -21,11 +20,14 @@ which is implemented by Bonjour/Ahahi.
 
 
 #  Implementations
+
+Current:
+
 * Python 2/3 (reference implementation)
 * Go
 
 
-Planned languages:
+Planned:
 
 * Embedded C
 * ...
@@ -66,8 +68,8 @@ sd01 works nicely with an RPC mechanism such as gRPC.
 
 ## Message
 
-A host emits a sd01 message every 5 seconds. If an announcer has not seen the
-sd01 message for 10 seconds, the host is considered offline.
+A host emits a sd01 message at least every 60 seconds. If an announcer has not
+seen the sd01 message for 600 seconds, the host is considered non-existent.
 
 ```
 sd01[service_class][service_port]
