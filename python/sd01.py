@@ -209,6 +209,8 @@ class Discoverer(Thread):
 
         self.lock = Lock()
         self.running = False
+        # overridden for test
+        self._listen_addr = "0.0.0.0"
 
     def start(self, *args, **kwargs):
         super(Discoverer, self).start(*args, **kwargs)
@@ -218,7 +220,7 @@ class Discoverer(Thread):
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
-        s.bind(('', PORT))
+        s.bind((self._listen_addr, PORT))
 
         while True:
             # bufsize should be a small power of 2 for maximum compatibility.
@@ -307,6 +309,7 @@ class SocketTests(unittest.TestCase):
         announcer = Announcer(service_class, 1234)
         announcer.start()
         discoverer = Discoverer(service_class)
+        Discoverer._listen_addr = "127.0.0.1"
         discoverer.start()
         sleep(6)
         services = discoverer.get_services()

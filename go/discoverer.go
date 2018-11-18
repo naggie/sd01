@@ -10,10 +10,12 @@ import (
 	"time"
 )
 
+// these vars may be overiden by test
 var (
 	// Timeout after which a discovered service is considered non-existent.
 	// Defined by protocol.
 	Timeout = 600 * time.Second
+	ListenAddr = [4]byte{0,0,0,0}
 )
 
 // Discoverer implements sd01 service discovery and provides a list of recently

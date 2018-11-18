@@ -35,7 +35,7 @@ func packetConnUDP(port int) (net.PacketConn, error) {
 		return nil, err
 	}
 
-	if err = unix.Bind(fd, &unix.SockaddrInet4{Port: port}); err != nil {
+	if err = unix.Bind(fd, &unix.SockaddrInet4{Port: port, Addr: ListenAddr}); err != nil {
 		return nil, err
 	}
 
