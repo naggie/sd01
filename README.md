@@ -106,3 +106,26 @@ to follow the same design which consists of:
      not crash the program, they may be logged)
   5. Valid sd01 messages from a different service_class are ignored
   5. Debug logging
+
+
+
+# Use cases
+
+## Multi Sensor
+This sensor is stateless and should just work.
+
+1. ESP8266 based sensor module connects to wifi, using DHCP
+2. ESP8266 announces via sd01 `DS Multisensor` port `80`
+3. Automation controller discovers a known multi sensor is listening on `192.168.59.32:80`, and knows the sensor speaks a specific HTTP JSON protocol
+4. Automation controller queries the sensor, and recevies something like:
+    ```
+    {
+       "id": "2ef8787",
+       "temperature": 49,
+       "humidity": 23
+    }
+    ```
+5. The automation controller consumes the value, knowing the location of the sensor by looking up the ID in its database. It knows this sensor is located in the `Kitchen`
+
+Note that the sensor is effectively stateless. It has its own preconfigured ID, which happens to be derrived from its MAC address.
+
