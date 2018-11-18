@@ -19,7 +19,6 @@ func TestDiscovery(t *testing.T) {
 
 	defer discoverer.Stop()
 
-
 	services := discoverer.GetServices()
 	t.Logf("Services: %+v", services)
 
@@ -29,10 +28,10 @@ func TestDiscovery(t *testing.T) {
 
 	announcer.Stop()
 
-	time.Sleep(Timeout+time.Second)
+	time.Sleep(Timeout + time.Second)
 
 	services = discoverer.GetServices()
-	time.Sleep(Timeout+time.Second)
+	time.Sleep(Timeout + time.Second)
 	services = discoverer.GetServices()
 
 	if len(services) != 0 {

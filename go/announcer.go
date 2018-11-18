@@ -11,8 +11,8 @@ import (
 const (
 	// Interval between announcements.
 	defaultInterval = 5 * time.Second
-	minInterval = 5 * time.Second
-	maxInterval = 60 * time.Second
+	minInterval     = 5 * time.Second
+	maxInterval     = 60 * time.Second
 
 	// Port is the sd01 service discovery port number.
 	Port = 17823
@@ -24,10 +24,10 @@ const (
 
 // Announcer implements sd01 service announcement.
 type Announcer struct {
-	name string
-	port int
-	wg   *sync.WaitGroup
-	stop chan struct{}
+	name     string
+	port     int
+	wg       *sync.WaitGroup
+	stop     chan struct{}
 	interval time.Duration
 }
 
@@ -38,9 +38,9 @@ func NewAnnouncer(name string, port int) *Announcer {
 		panic("port number outside of legal range")
 	}
 	return &Announcer{
-		name: name,
-		port: port,
-		wg:   &sync.WaitGroup{},
+		name:     name,
+		port:     port,
+		wg:       &sync.WaitGroup{},
 		interval: defaultInterval,
 	}
 }
@@ -75,7 +75,7 @@ func (a *Announcer) Start() error {
 }
 
 func (a *Announcer) SetInterval(interval time.Duration) {
-	if (interval < minInterval || interval > maxInterval) {
+	if interval < minInterval || interval > maxInterval {
 		panic("Specified interval out of range")
 	}
 	a.interval = interval
