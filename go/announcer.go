@@ -28,7 +28,7 @@ type Announcer struct {
 	port int
 	wg   *sync.WaitGroup
 	stop chan struct{}
-	interval int
+	interval time.Duration
 }
 
 // NewAnnouncer returns a new Announcer and published beacons containing the
@@ -74,7 +74,7 @@ func (a *Announcer) Start() error {
 	return nil
 }
 
-func (a *Announcer) SetInterval(interval int) {
+func (a *Announcer) SetInterval(interval time.Duration) {
 	if (interval < minInterval || interval > maxInterval) {
 		panic("Specified interval out of range")
 	}
@@ -90,7 +90,7 @@ func (a *Announcer) Stop() {
 func (a *Announcer) run(conn *net.UDPConn, dest *net.UDPAddr, message string) {
 	defer a.wg.Done()
 	defer conn.Close()
-	ticker := time.NewTicker(Interval)
+	ticker := time.NewTicker(a.interval)
 	defer ticker.Stop()
 	for {
 		select {

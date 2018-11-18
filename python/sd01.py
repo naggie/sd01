@@ -31,7 +31,9 @@ Usage:
     # on machine that must discover services
     d = Discoverer('my_project_name')
     d.start()
-    services = d.get_services(wait=True)
+    sleep(10)
+    # poll this
+    services = d.get_services()
 
     # ...at any time, preferably after wait
     services = d.get_services()
@@ -247,14 +249,11 @@ class Discoverer(Thread):
             with self.lock:
                 self.services[(host, port)] = time()
 
-    def get_services(self, wait=False):
+    def get_services(self):
         '''Returns a list of tuples (host,port) for active services'''
         if not self.running:
             raise RuntimeError(
                 'You must call start() first to start listening for announcements')
-
-        if wait:
-            sleep(INTERVAL + 1)
 
         min_ts = time() - TIMEOUT
 
@@ -294,7 +293,7 @@ class EncodeTests(unittest.TestCase):
 
     def test_long_service_name(self):
         with self.assertRaises(ValueError):
-            encode('a' * 40, 0)
+            encode('a' * 400, 0)
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
@@ -309,8 +308,8 @@ class SocketTests(unittest.TestCase):
         announcer.start()
         discoverer = Discoverer(service_class)
         discoverer.start()
-
-        services = discoverer.get_services(wait=True)
+        sleep(6)
+        services = discoverer.get_services()
         self.assertEqual(len(services), 1)
         self.assertEqual(services[0][1], 1234)
 

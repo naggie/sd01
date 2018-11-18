@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const (
+var (
 	// Timeout after which a discovered service is considered non-existent.
 	// Defined by protocol.
 	Timeout = 600 * time.Second
@@ -37,11 +37,7 @@ func NewDiscoverer(name string) *Discoverer {
 }
 
 // GetServices returns a list of recently discovered services.
-func (d *Discoverer) GetServices(wait bool) []Service {
-	if wait {
-		time.Sleep(Timeout)
-	}
-
+func (d *Discoverer) GetServices() []Service {
 	d.servicesMu.RLock()
 	defer d.servicesMu.RUnlock()
 
