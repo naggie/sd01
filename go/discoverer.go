@@ -100,8 +100,8 @@ func (d *Discoverer) run(conn net.PacketConn) {
 					fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 				} else {
 					bufstr := string(buf[:buflen])
-					service := bufstr[4 : len(bufstr)-5]
-					portstr := bufstr[len(bufstr)-5:]
+					service := bufstr[9:len(bufstr)]
+					portstr := bufstr[4:9]
 					portnum, err := strconv.Atoi(portstr)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())

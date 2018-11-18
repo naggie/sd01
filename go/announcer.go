@@ -62,7 +62,7 @@ func (a *Announcer) Start() error {
 		return err
 	}
 
-	message := fmt.Sprintf("sd01%s%05d", a.name, a.port)
+	message := fmt.Sprintf("sd01%05d%s", a.port, a.name)
 	if len(message) > maxMessageLength {
 		return fmt.Errorf("message is greater than 64 byte maximum (is %d: %s)", len(message), message)
 	}

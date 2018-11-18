@@ -64,7 +64,7 @@ log = getLogger(__name__)
 
 # deterministic message size regardless of port. Service ID max 55 chars --
 # message length is 64 bytes max to keep broadcast traffic low.
-MESSAGE_FORMAT = 'sd01{service_name}{service_port:0>5}'
+MESSAGE_FORMAT = 'sd01{service_port:0>5}{service_name}'
 
 # Note that this is recommended to be a (small) power of 2 for maximum
 # compatibility.
@@ -132,28 +132,20 @@ def decode(message, service_name):
     except ValueError:
         raise NonAsciiCharacters()
 
-    prefix = MESSAGE_FORMAT.format(
-        service_name=service_name,
-        service_port=0,
-    )[:-5]
-
-    if not message.startswith(prefix):
-        # not matching this service_name
+    if len(message) != len(service_name) + 9:
         return None
 
-    if len(message) != len(prefix) + 5:
-        # not matching this service_name because this service_name is a
-        # prefix to another
+    if not message.endswith(service_name):
         return None
 
     # no whitespace or decimals, unlike attempting to parse with
     # `int`. Note that it is important to be strict to that other
     # implementations do not rely on undefined behaviour and break
     # later.
-    if not message[-5:].isdigit():
+    if not message[4:9].isdigit():
         raise InvalidPort()
 
-    port = int(message[-5:])
+    port = int(message[4:9])
 
     if port < 0 or port > 65535:
         raise IllegalPort()
@@ -263,32 +255,32 @@ class Discoverer(Thread):
 class DecodeTests(unittest.TestCase):
     def test_invalid_port(self):
         with self.assertRaises(InvalidPort):
-            decode(message=b'sd01test00r22', service_name='test')
+            decode(message=b'sd0100r22test', service_name='test')
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            decode(message=b'sd01test99999', service_name='test')
+            decode(message=b'sd0199999test', service_name='test')
 
     def test_non_ascii(self):
         with self.assertRaises(NonAsciiCharacters):
             decode(
-                message=u'sd01\xc3est99999'.encode('utf-8'),
+                message=u'sd0199999\xc3est'.encode('utf-8'),
                 service_name='test')
 
     def test_foreign_message(self):
         with self.assertRaises(InvalidMagic):
             decode(b'banana', 'test')
 
-    def test_prefix_service_name(self):
-        self.assertIsNone(decode(b'sd01foobar00000', 'foo'))
+    def test_suffix_service_name(self):
+        self.assertIsNone(decode(b'sd0100001foobar', 'bar'))
 
     def test_different_service_name(self):
-        self.assertIsNone(decode(b'sd01bar00000', 'foo'))
+        self.assertIsNone(decode(b'sd0100000bar', 'foo'))
 
 
 class EncodeTests(unittest.TestCase):
     def test_valid(self):
-        self.assertEqual(encode('test123', 80), b'sd01test12300080')
+        self.assertEqual(encode('test123', 80), b'sd0100080test123')
 
     def test_long_service_name(self):
         with self.assertRaises(ValueError):
