@@ -74,6 +74,8 @@ INTERVAL = 10
 TIMEOUT = 600
 
 PORT = 17823
+# overridden for test
+LISTEN_ADDR = "0.0.0.0"
 
 
 class InvalidPort(ValueError):
@@ -204,8 +206,6 @@ class Discoverer(Thread):
 
         self.lock = Lock()
         self.running = False
-        # overridden for test
-        self._listen_addr = "0.0.0.0"
 
     def start(self, *args, **kwargs):
         super(Discoverer, self).start(*args, **kwargs)
@@ -215,7 +215,7 @@ class Discoverer(Thread):
     def run(self):
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
-        s.bind((self._listen_addr, PORT))
+        s.bind((LISTEN_ADDR, PORT))
 
         while True:
             # bufsize should be a small power of 2 for maximum compatibility.
@@ -298,15 +298,24 @@ class EncodeTests(unittest.TestCase):
 
 
 class SocketTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        global LISTEN_ADDR
+        global TIMEOUT
+        global INTERVAL
+        LISTEN_ADDR = '127.0.0.1'
+        TIMEOUT = 2
+        INTERVAL = 1
+
     # TODO a method of stopping an announcer, or write/read from socket directly
     def test_discovery(self):
         service_class = str(time())
         announcer = Announcer(service_class, 1234)
         announcer.start()
         discoverer = Discoverer(service_class)
-        Discoverer._listen_addr = "127.0.0.1"
+        Discoverer.LISTEN_ADDR = "127.0.0.1"
         discoverer.start()
-        sleep(6)
+        sleep(1.5)
         services = discoverer.get_services()
         self.assertEqual(len(services), 1)
         self.assertEqual(services[0][1], 1234)
