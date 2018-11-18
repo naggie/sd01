@@ -52,9 +52,9 @@ broadcast; sd01 is just a standard way to do so, cross-platform.
 # Protocol
 
 sd01 is deliberately minimal. It just exposes the IP address and the port of a
-particular named service. Note that device descriptions, names and capabilities
-are deliberately left out; this should be implemented as an API on the service
-itself.
+particular named service. Note that device descriptions, names, versioning and
+capabilities are deliberately left out; this should be implemented as an API on
+the service itself.
 
 sd01 works nicely with an RPC mechanism such as gRPC.
 
@@ -62,7 +62,7 @@ sd01 works nicely with an RPC mechanism such as gRPC.
 
   * Host: a device or server running a service
   * Service: Something listening on a port running on a host.
-  * Service class: An ascii identifier corresponding to the service/project
+  * Service name: An ascii identifier corresponding to the service/project
     name. A version number could be appended. Max 23 characters.
   * Service port: The port the service is listening on
 
@@ -72,25 +72,25 @@ A host emits a sd01 message every 10 seconds. If an announcer has not
 seen the sd01 message for 600 seconds, the host is considered non-existent.
 
 ```
-sd01[service_class][service_port]
+sd01[service_name][service_port]
 ```
 
 Where, without brackets:
 
-  1. The total message length is no more than 64 bytes (55 chars for service_class)
+  1. The total message length is no more than 64 bytes (55 chars for service_name)
   2. The entire message is composed of ASCII characters only
   3. The message is prefixed with `sd01`
   4. The message the service port, 5 digit, zero padded
 
 
-For example with a service class named "lightcontrollerv2" running on port 80:
+For example with a service name named "lightcontrollerv2" running on port 80:
 
 ```
 sd01lightcontrollerv200080
 ```
 
 
-Both the announcer and discoverer are aware of the `service_class` in advance.
+Both the announcer and discoverer are aware of the `service_name` in advance.
 
 ## Reference implementation
 
@@ -104,7 +104,7 @@ to follow the same design which consists of:
      (host,port) pairs.
   4. Invalid sd01 messages are handled as errors (although these errors should
      not crash the program, they may be logged)
-  5. Valid sd01 messages from a different service_class are ignored
+  5. Valid sd01 messages from a different service_name are ignored
   5. Debug logging
 
 

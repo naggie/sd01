@@ -64,7 +64,7 @@ log = getLogger(__name__)
 
 # deterministic message size regardless of port. Service ID max 55 chars --
 # message length is 64 bytes max to keep broadcast traffic low.
-MESSAGE_FORMAT = 'sd01{service_class}{service_port:0>5}'
+MESSAGE_FORMAT = 'sd01{service_name}{service_port:0>5}'
 
 # Note that this is recommended to be a (small) power of 2 for maximum
 # compatibility.
@@ -105,22 +105,22 @@ def forever_IOError(fn):
     return _fn
 
 
-def encode(service_class, service_port):
-    if len(service_class) > MAX_MESSAGE_LENGTH - 9:
+def encode(service_name, service_port):
+    if len(service_name) > MAX_MESSAGE_LENGTH - 9:
         raise ValueError('Service name is too long.')
 
     if service_port < 0 or service_port > 65535:
         raise IllegalPort()
 
     message = MESSAGE_FORMAT.format(
-        service_class=service_class,
+        service_name=service_name,
         service_port=service_port,
     ).encode('ascii')
 
     return message
 
 
-def decode(message, service_class):
+def decode(message, service_name):
     assert isinstance(message, bytes)
 
     if not message.startswith(b'sd01'):
@@ -133,16 +133,16 @@ def decode(message, service_class):
         raise NonAsciiCharacters()
 
     prefix = MESSAGE_FORMAT.format(
-        service_class=service_class,
+        service_name=service_name,
         service_port=0,
     )[:-5]
 
     if not message.startswith(prefix):
-        # not matching this service_class
+        # not matching this service_name
         return None
 
     if len(message) != len(prefix) + 5:
-        # not matching this service_class because this service_class is a
+        # not matching this service_name because this service_name is a
         # prefix to another
         return None
 
@@ -164,11 +164,11 @@ def decode(message, service_class):
 class Announcer(Thread):
     daemon = True
 
-    def __init__(self, service_class, service_port):
+    def __init__(self, service_name, service_port):
         super(Announcer, self).__init__()
 
-        service_class.encode('ascii')  # validate
-        self.service_class = service_class
+        service_name.encode('ascii')  # validate
+        self.service_name = service_name
         self.service_port = int(service_port)
 
         if self.service_port < 0 or self.service_port > 65535:
@@ -183,7 +183,7 @@ class Announcer(Thread):
         s.bind(('', 0))
         s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
 
-        message = encode(self.service_class, self.service_port)
+        message = encode(self.service_name, self.service_port)
 
         while not self.shutdown:
             log.debug('Announcing on port %s with message %s',
@@ -198,10 +198,10 @@ class Announcer(Thread):
 class Discoverer(Thread):
     daemon = True
 
-    def __init__(self, service_class):
+    def __init__(self, service_name):
         super(Discoverer, self).__init__()
-        service_class.encode('ascii')  # validate
-        self.service_class = service_class
+        service_name.encode('ascii')  # validate
+        self.service_name = service_name
 
         # map of (host,port) -> timestamp of last announcement
         self.services = dict()
@@ -227,7 +227,7 @@ class Discoverer(Thread):
             port = None
 
             try:
-                port = decode(message, self.service_class)
+                port = decode(message, self.service_name)
             except NonAsciiCharacters:
                 log.warn('Received invalid sd01 message: non-ascii characters')
             except InvalidPort:
@@ -239,7 +239,7 @@ class Discoverer(Thread):
             except InvalidMagic:
                 log.warn('Received message without sd01 magic prefix')
 
-            # a different service_class or invalid message (warn above)
+            # a different service_name or invalid message (warn above)
             if not port:
                 continue
 
@@ -263,17 +263,17 @@ class Discoverer(Thread):
 class DecodeTests(unittest.TestCase):
     def test_invalid_port(self):
         with self.assertRaises(InvalidPort):
-            decode(message=b'sd01test00r22', service_class='test')
+            decode(message=b'sd01test00r22', service_name='test')
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            decode(message=b'sd01test99999', service_class='test')
+            decode(message=b'sd01test99999', service_name='test')
 
     def test_non_ascii(self):
         with self.assertRaises(NonAsciiCharacters):
             decode(
                 message=u'sd01\xc3est99999'.encode('utf-8'),
-                service_class='test')
+                service_name='test')
 
     def test_foreign_message(self):
         with self.assertRaises(InvalidMagic):
@@ -309,10 +309,10 @@ class SocketTests(unittest.TestCase):
 
     # TODO a method of stopping an announcer, or write/read from socket directly
     def test_discovery(self):
-        service_class = str(time())
-        discoverer = Discoverer(service_class)
+        service_name = str(time())
+        discoverer = Discoverer(service_name)
         discoverer.start()
-        announcer = Announcer(service_class, 1234)
+        announcer = Announcer(service_name, 1234)
         announcer.start()
 
         sleep(2)
