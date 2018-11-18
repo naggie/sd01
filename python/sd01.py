@@ -315,10 +315,15 @@ class SocketTests(unittest.TestCase):
         discoverer = Discoverer(service_class)
         Discoverer.LISTEN_ADDR = "127.0.0.1"
         discoverer.start()
+
         sleep(1.5)
         services = discoverer.get_services()
         self.assertEqual(len(services), 1)
         self.assertEqual(services[0][1], 1234)
+
+        sleep(2.5)
+        services = discoverer.get_services()
+        self.assertEqual(len(services), 0)
 
     # TODO: test a service going offline
     # def test_service_offline
