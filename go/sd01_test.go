@@ -15,8 +15,8 @@ func TestDiscovery(t *testing.T) {
 	announcer := NewAnnouncer("Some service", 22993)
 	discoverer := NewDiscoverer("Some service")
 
-	announcer.Start()
 	discoverer.Start()
+	announcer.Start()
 
 	time.Sleep(6 * time.Second)
 

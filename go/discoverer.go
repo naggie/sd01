@@ -81,7 +81,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 	defer conn.Close()
 
 	// try to create listen socket in a loop...etc.
-	buf := make([]byte, 64)
+	buf := make([]byte, maxMessageLength)
 
 	for atomic.LoadInt32(&d.stop) == 0 {
 		err := conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
