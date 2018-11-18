@@ -179,6 +179,8 @@ class Announcer(Thread):
 
     @forever_IOError
     def run(self):
+        self.shutdown = False
+
         # create UDP socket
         s = socket(AF_INET, SOCK_DGRAM)
         s.bind(('', 0))
@@ -186,11 +188,14 @@ class Announcer(Thread):
 
         message = encode(self.service_class, self.service_port)
 
-        while True:
+        while not self.shutdown:
             log.debug('Announcing on port %s with message %s',
                       PORT, message)
             s.sendto(message, ('<broadcast>', PORT))
             sleep(INTERVAL)
+
+    def stop(self):
+        self.shutdown = True
 
 
 class Discoverer(Thread):
@@ -304,7 +309,7 @@ class SocketTests(unittest.TestCase):
         global TIMEOUT
         global INTERVAL
         LISTEN_ADDR = '127.0.0.1'
-        TIMEOUT = 2
+        TIMEOUT = 3
         INTERVAL = 1
 
     # TODO a method of stopping an announcer, or write/read from socket directly
@@ -316,12 +321,13 @@ class SocketTests(unittest.TestCase):
         Discoverer.LISTEN_ADDR = "127.0.0.1"
         discoverer.start()
 
-        sleep(1.5)
+        sleep(2)
         services = discoverer.get_services()
         self.assertEqual(len(services), 1)
         self.assertEqual(services[0][1], 1234)
 
-        sleep(2.5)
+        announcer.stop()
+        sleep(4)
         services = discoverer.get_services()
         self.assertEqual(len(services), 0)
 
