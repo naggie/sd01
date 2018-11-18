@@ -32,7 +32,7 @@ func main() {
 			return
 
 		case <-ticker.C:
-			services := sd.GetServices(false)
+			services := sd.GetServices()
 			fmt.Printf("found %d services:\n", len(services))
 			for _, service := range services {
 				fmt.Printf("  - %s\n", service.String())
