@@ -10,9 +10,6 @@ func TestDiscovery(t *testing.T) {
 	Timeout = 2 * time.Second
 	Interval = 1 * time.Second
 
-	// listen locally only so firewalls don't get in the way
-	ListenAddr = [4]byte{127,0,0,1}
-
 	announcer := NewAnnouncer("Some service", 22993)
 	discoverer := NewDiscoverer("Some service")
 
