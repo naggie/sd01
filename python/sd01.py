@@ -70,9 +70,7 @@ MESSAGE_FORMAT = 'sd01{service_class}{service_port:0>5}'
 # compatibility.
 MAX_MESSAGE_LENGTH = 64
 
-DEFAULT_INTERVAL = 5
-MIN_INTERVAL = 5
-MAX_INTERVAL = 60
+INTERVAL = 10
 TIMEOUT = 600
 
 PORT = 17823
@@ -167,10 +165,7 @@ def decode(message, service_class):
 class Announcer(Thread):
     daemon = True
 
-    def __init__(self, service_class, service_port, interval=DEFAULT_INTERVAL):
-        if interval < MIN_INTERVAL or interval > MAX_INTERVAL:
-            raise ValueError("Interval out of range")
-
+    def __init__(self, service_class, service_port):
         super(Announcer, self).__init__()
 
         service_class.encode('ascii')  # validate
@@ -193,7 +188,7 @@ class Announcer(Thread):
             log.debug('Announcing on port %s with message %s',
                       PORT, message)
             s.sendto(message, ('<broadcast>', PORT))
-            sleep(DEFAULT_INTERVAL)
+            sleep(INTERVAL)
 
 
 class Discoverer(Thread):

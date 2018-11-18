@@ -7,7 +7,8 @@ import (
 
 func TestDiscovery(t *testing.T) {
 	// speed up the test
-	Timeout = 9
+	Timeout = 2 * time.Second
+	Interval = 1 * time.Second
 
 	// listen locally only so firewalls don't get in the way
 	ListenAddr = [4]byte{127,0,0,1}
@@ -18,7 +19,7 @@ func TestDiscovery(t *testing.T) {
 	discoverer.Start()
 	announcer.Start()
 
-	time.Sleep(6 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	defer discoverer.Stop()
 
@@ -31,10 +32,10 @@ func TestDiscovery(t *testing.T) {
 
 	announcer.Stop()
 
-	time.Sleep(Timeout + time.Second)
+	time.Sleep(2 * time.Second)
 
 	services = discoverer.GetServices()
-	time.Sleep(Timeout + time.Second)
+	time.Sleep(2 * time.Second)
 	services = discoverer.GetServices()
 
 	if len(services) != 0 {

@@ -8,11 +8,13 @@ import (
 	"time"
 )
 
-const (
+// these vars may be overridden by test
+var (
 	// Interval between announcements.
-	defaultInterval = 5 * time.Second
-	minInterval     = 5 * time.Second
-	maxInterval     = 60 * time.Second
+	Interval = 5 * time.Second
+)
+
+const (
 
 	// Port is the sd01 service discovery port number.
 	Port = 17823
@@ -28,7 +30,6 @@ type Announcer struct {
 	port     int
 	wg       *sync.WaitGroup
 	stop     chan struct{}
-	interval time.Duration
 }
 
 // NewAnnouncer returns a new Announcer and published beacons containing the
@@ -41,7 +42,6 @@ func NewAnnouncer(name string, port int) *Announcer {
 		name:     name,
 		port:     port,
 		wg:       &sync.WaitGroup{},
-		interval: defaultInterval,
 	}
 }
 
@@ -74,13 +74,6 @@ func (a *Announcer) Start() error {
 	return nil
 }
 
-func (a *Announcer) SetInterval(interval time.Duration) {
-	if interval < minInterval || interval > maxInterval {
-		panic("Specified interval out of range")
-	}
-	a.interval = interval
-}
-
 // Stop the Announcer.
 func (a *Announcer) Stop() {
 	close(a.stop)
@@ -90,7 +83,7 @@ func (a *Announcer) Stop() {
 func (a *Announcer) run(conn *net.UDPConn, dest *net.UDPAddr, message string) {
 	defer a.wg.Done()
 	defer conn.Close()
-	ticker := time.NewTicker(a.interval)
+	ticker := time.NewTicker(Interval)
 	defer ticker.Stop()
 	for {
 		select {

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// these vars may be overiden by test
+// these vars may be overridden by test
 var (
 	// Timeout after which a discovered service is considered non-existent.
 	// Defined by protocol.
@@ -87,7 +87,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 		err := conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to set read deadline:", err)
-			time.Sleep(Timeout)
+			time.Sleep(time.Second)
 		} else {
 			buflen, addr, err := conn.ReadFrom(buf)
 			if err != nil {
