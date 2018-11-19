@@ -3,7 +3,7 @@ sd01 is a minimal service discovery protocol with strict implementation.
 [![Build Status](https://travis-ci.org/naggie/sd01.svg?branch=master)](https://travis-ci.org/naggie/sd01)
 
 Developement status: Beta. Suitable for production but test coverage needs to
-be improved. #10 may result inn a breaking change to the protocol.
+be improved.
 
 sd01 is an alternative to [mDNS](https://en.wikipedia.org/wiki/Multicast_DNS)
 which is implemented by Bonjour/Ahahi.
@@ -62,8 +62,8 @@ sd01 works nicely with an RPC mechanism such as gRPC.
 
   * Host: a device or server running a service
   * Service: Something listening on a port running on a host.
-  * Service name: An ascii identifier corresponding to the service/project
-    name. A version number could be appended. Max 23 characters.
+  * Service name: Product name, max 55 characters. Do not encode version or
+    capabilites.
   * Service port: The port the service is listening on
 
 ## Message
@@ -72,7 +72,7 @@ A host emits a sd01 message every 10 seconds. If an announcer has not
 seen the sd01 message for 600 seconds, the host is considered non-existent.
 
 ```
-sd01[service_name][service_port]
+sd01[service_port][service_name]
 ```
 
 Where, without brackets:
@@ -80,13 +80,13 @@ Where, without brackets:
   1. The total message length is no more than 64 bytes (55 chars for service_name)
   2. The entire message is composed of ASCII characters only
   3. The message is prefixed with `sd01`
-  4. The message the service port, 5 digit, zero padded
+  4. The service port is, 5 digits, zero padded
 
 
-For example with a service name named "lightcontrollerv2" running on port 80:
+For example with a service name "DS Light controller" running on port 80:
 
 ```
-sd01lightcontrollerv200080
+sd0100080DS light controller
 ```
 
 
