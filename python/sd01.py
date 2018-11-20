@@ -62,7 +62,7 @@ except ImportError:
 
 log = getLogger(__name__)
 
-# deterministic message size regardless of port. Service ID max 55 chars --
+# deterministic message size regardless of port. Service ID max 53 chars --
 # message length is 64 bytes max to keep broadcast traffic low.
 MESSAGE_FORMAT = 'sd01:{service_name}:{service_port}'
 
