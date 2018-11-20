@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"strings"
 )
 
 // these vars may be overridden by test
@@ -96,12 +97,19 @@ func (d *Discoverer) run(conn net.PacketConn) {
 			} else {
 				if buflen == 0 || buflen > maxMessageLength {
 					fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
-				} else if string(buf[:4]) != "sd01" {
+				} else if string(buf[:5]) != "sd01:" {
 					fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
 				} else {
 					bufstr := string(buf[:buflen])
-					service := bufstr[9:len(bufstr)]
-					portstr := bufstr[4:9]
+					parts := SplitN(bufstr, ":", 3)
+
+					if len(parts) != 3 {
+						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid number of parts - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+						continue
+					}
+
+					service := parts[1]
+					portstr := parts[2]
 					portnum, err := strconv.Atoi(portstr)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
