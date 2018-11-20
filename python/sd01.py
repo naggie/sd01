@@ -45,6 +45,7 @@ Usage:
 # TODO IPv6 (multicast based) support?
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
+# TODO consider replacing exceptions with returning None (invalid messages are obvious)
 
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
@@ -64,7 +65,7 @@ log = getLogger(__name__)
 
 # deterministic message size regardless of port. Service ID max 55 chars --
 # message length is 64 bytes max to keep broadcast traffic low.
-MESSAGE_FORMAT = 'sd01{service_port:0>5}{service_name}'
+MESSAGE_FORMAT = 'sd01:{service_name}:{service_port}'
 
 # Note that this is recommended to be a (small) power of 2 for maximum
 # compatibility.
@@ -123,29 +124,37 @@ def encode(service_name, service_port):
 def decode(message, service_name):
     assert isinstance(message, bytes)
 
-    if not message.startswith(b'sd01'):
+    try:
+        message = message.decode('ascii')
+    except ValueError:
+        raise NonAsciiCharacters()
+
+    if not message.startswith(b"sd01"):
         # foreign protocol etc
         raise InvalidMagic()
+
+    if not message.startswith(b'sd01:' + service_name + ":"):
+        # foreign protocol etc
+        return None
 
     try:
         message = message.decode('ascii')
     except ValueError:
         raise NonAsciiCharacters()
 
-    if len(message) != len(service_name) + 9:
-        return None
+    parts = message.split(":")
 
-    if not message.endswith(service_name):
-        return None
+    if len(parts) != 3:
+        raise ValueError("Invalid number of parts")
 
     # no whitespace or decimals, unlike attempting to parse with
     # `int`. Note that it is important to be strict to that other
     # implementations do not rely on undefined behaviour and break
     # later.
-    if not message[4:9].isdigit():
+    if not parts[2].isdigit():
         raise InvalidPort()
 
-    port = int(message[4:9])
+    port = int(parts[2])
 
     if port < 0 or port > 65535:
         raise IllegalPort()
@@ -255,16 +264,16 @@ class Discoverer(Thread):
 class DecodeTests(unittest.TestCase):
     def test_invalid_port(self):
         with self.assertRaises(InvalidPort):
-            decode(message=b'sd0100r22test', service_name='test')
+            decode(message=b'sd01:test:r92', service_name='test')
 
     def test_illegal_port(self):
         with self.assertRaises(IllegalPort):
-            decode(message=b'sd0199999test', service_name='test')
+            decode(message=b'sd01:test:99999', service_name='test')
 
     def test_non_ascii(self):
         with self.assertRaises(NonAsciiCharacters):
             decode(
-                message=u'sd0199999\xc3est'.encode('utf-8'),
+                message=u'sd01:\xc3est:93'.encode('utf-8'),
                 service_name='test')
 
     def test_foreign_message(self):
@@ -272,15 +281,15 @@ class DecodeTests(unittest.TestCase):
             decode(b'banana', 'test')
 
     def test_suffix_service_name(self):
-        self.assertIsNone(decode(b'sd0100001foobar', 'bar'))
+        self.assertIsNone(decode(b'sd01:foobar:92', 'bar'))
 
     def test_different_service_name(self):
-        self.assertIsNone(decode(b'sd0100000bar', 'foo'))
+        self.assertIsNone(decode(b'sd01:cheese:20', 'foo'))
 
 
 class EncodeTests(unittest.TestCase):
     def test_valid(self):
-        self.assertEqual(encode('test123', 80), b'sd0100080test123')
+        self.assertEqual(encode('test123', 80), b'sd01:test123:80')
 
     def test_long_service_name(self):
         with self.assertRaises(ValueError):
