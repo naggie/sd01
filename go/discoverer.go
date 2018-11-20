@@ -104,7 +104,7 @@ func (d *Discoverer) run(conn net.PacketConn) {
 			continue
 		}
 		bufstr := string(buf[:buflen])
-		parts := SplitN(bufstr, ":", 3)
+		parts := strings.SplitN(bufstr, ":", 3)
 
 		if len(parts) != 3 {
 			fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid number of parts - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
