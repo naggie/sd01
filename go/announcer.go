@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"strings"
 )
 
 // these vars may be overridden by test
@@ -37,6 +38,9 @@ type Announcer struct {
 func NewAnnouncer(name string, port int) *Announcer {
 	if port < 0 || port > 65535 {
 		panic("port number outside of legal range")
+	}
+	if strings.Contains(name, ":") {
+		panic("service name contains illegal colon")
 	}
 	return &Announcer{
 		name:     name,
