@@ -88,47 +88,47 @@ func (d *Discoverer) run(conn net.PacketConn) {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to set read deadline:", err)
 			time.Sleep(time.Second)
-		} else {
-			buflen, addr, err := conn.ReadFrom(buf)
-			if err != nil {
-				if e, ok := err.(net.Error); ok && !e.Timeout() {
-					fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to read beacon:", err)
-				}
-			} else {
-				if buflen == 0 || buflen > maxMessageLength {
-					fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
-				} else if string(buf[:5]) != "sd01:" {
-					fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
-				} else {
-					bufstr := string(buf[:buflen])
-					parts := SplitN(bufstr, ":", 3)
-
-					if len(parts) != 3 {
-						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid number of parts - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
-						continue
-					}
-
-					service := parts[1]
-					portstr := parts[2]
-					portnum, err := strconv.Atoi(portstr)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
-					} else if service == d.name {
-						d.servicesMu.Lock()
-						discovered := Service{
-							IP:       addr.(*net.UDPAddr).IP,
-							Port:     portnum,
-							LastSeen: time.Now(),
-						}
-						key := discovered.String()
-						if _, exists := d.services[key]; !exists && d.Debug {
-							fmt.Fprintf(os.Stderr, "sd01.discoverer: New %v discovered at %v\n", d.name, key)
-						}
-						d.services[key] = discovered
-						d.servicesMu.Unlock()
-					}
-				}
+			continue
+		}
+		buflen, addr, err := conn.ReadFrom(buf)
+		if err != nil {
+			if e, ok := err.(net.Error); ok && !e.Timeout() {
+				fmt.Fprintln(os.Stderr, "sd01.discoverer: failed to read beacon:", err)
 			}
+			continue
+		}
+		if buflen == 0 || buflen > maxMessageLength {
+			fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon of unsupported - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+		} else if string(buf[:5]) != "sd01:" {
+			fmt.Fprintf(os.Stderr, "sd01.discoverer: received invalid beacon - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+			continue
+		}
+		bufstr := string(buf[:buflen])
+		parts := SplitN(bufstr, ":", 3)
+
+		if len(parts) != 3 {
+			fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid number of parts - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+			continue
+		}
+
+		service := parts[1]
+		portstr := parts[2]
+		portnum, err := strconv.Atoi(portstr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "sd01.discoverer: received beacon with invalid port - length: %d, data: %s, addr: %s", buflen, string(buf[:buflen]), addr.String())
+		} else if service == d.name {
+			d.servicesMu.Lock()
+			discovered := Service{
+				IP:       addr.(*net.UDPAddr).IP,
+				Port:     portnum,
+				LastSeen: time.Now(),
+			}
+			key := discovered.String()
+			if _, exists := d.services[key]; !exists && d.Debug {
+				fmt.Fprintf(os.Stderr, "sd01.discoverer: New %v discovered at %v\n", d.name, key)
+			}
+			d.services[key] = discovered
+			d.servicesMu.Unlock()
 		}
 	}
 }
