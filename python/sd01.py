@@ -44,8 +44,6 @@ Usage:
 # TODO IPv6 (multicast based) support?
 # example https://svn.python.org/projects/python/trunk/Demo/sockets/mcast.py
 
-# TODO consider replacing exceptions with returning None (invalid messages are obvious)
-
 from socket import socket, AF_INET, SOCK_DGRAM, SOL_SOCKET, SO_BROADCAST
 from threading import Thread, Lock
 from logging import getLogger
@@ -314,7 +312,6 @@ class SocketTests(unittest.TestCase):
         TIMEOUT = 3
         INTERVAL = 1
 
-    # TODO a method of stopping an announcer, or write/read from socket directly
     def test_discovery(self):
         service_name = str(time())
         discoverer = Discoverer(service_name)
@@ -331,9 +328,6 @@ class SocketTests(unittest.TestCase):
         sleep(4)
         services = discoverer.get_services()
         self.assertEqual(len(services), 0)
-
-    # TODO: test a service going offline
-    # def test_service_offline
 
 
 if __name__ == '__main__':
